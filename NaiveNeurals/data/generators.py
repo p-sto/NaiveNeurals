@@ -1,4 +1,5 @@
 """Module contains generators for learning data"""
+
 from typing import Optional
 
 import numpy as np

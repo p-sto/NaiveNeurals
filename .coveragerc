@@ -1,0 +1,15 @@
+[run]
+branch = True
+
+source = NaiveNeurals
+
+[report]
+exclude_lines =
+      pass
+ignore_errors = False
+show_missing = False
+
+omit =
+      tests/*
+      NaiveNeurals/__init__.py
+      NaiveNeurals/*/__init__.py

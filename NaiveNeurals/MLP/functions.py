@@ -1,23 +1,39 @@
-""""""
+"""Module containing definitions of arithmetic functions used by perceptrons"""
+
 import math
+from abc import ABC, abstractmethod
 
 import numpy as np
 
 from NaiveNeurals.utils import ErrorAlgorithm
 
 
-class Function:
+class Function(ABC):
+    """Abstract function for defining functions"""
 
     @staticmethod
+    @abstractmethod
     def function(arg: float) -> float:
-        raise NotImplemented
+        """Implementation of function
+
+        :param arg: float
+        :return: float
+        """
+        raise NotImplementedError()
 
     @classmethod
+    @abstractmethod
     def prime(cls, arg: float) -> float:
-        raise NotImplemented
+        """First derivative of implemented function
+
+        :param arg: float
+        :return: float
+        """
+        raise NotImplementedError()
 
 
 class Sigmoid(Function):
+    """Represents sigmoid function and its derivative """
 
     @staticmethod
     def function(arg: float) -> float:
@@ -38,7 +54,7 @@ class Sigmoid(Function):
         return cls.function(arg) * (1 - cls.function(arg))
 
 
-def calculate_error(target: np.array, actual: np.array, func_type: ErrorAlgorithm=ErrorAlgorithm.SQR) -> float:
+def calculate_error(target: np.array, actual: np.array, func_type: ErrorAlgorithm = ErrorAlgorithm.SQR) -> float:
     """Calculates error for provided actual and targeted data.
 
     :param target: target data
@@ -48,6 +64,4 @@ def calculate_error(target: np.array, actual: np.array, func_type: ErrorAlgorith
     """
     if func_type == ErrorAlgorithm.SQR:
         return 0.5 * pow(sum(actual - target), 2)
-    raise NotImplemented
-
-
+    raise NotImplementedError()

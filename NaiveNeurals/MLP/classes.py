@@ -166,10 +166,12 @@ class PerceptronNode:
         """
         self.inputs: List[Input] = [Input(self, random.uniform(-0.5, 0.5)) for _ in range(input_data_size)]
         self.output = Output(self)
-        self.bias = Bias(bias_val) if bias_val else Bias(1.0)
+        self.bias = None
         self.activation_function = activation_func
         self.layer = layer
         self.is_input_node = is_input_node
+        if not self.is_input_node:
+            self.bias = Bias(bias_val) if bias_val else Bias(1.0)
         # if it's input layer node then weights will be se to 1
         if self.is_input_node:
             _ = [inp.weight.update(1) for inp in self.inputs]
@@ -199,6 +201,8 @@ class PerceptronNode:
 
         :return: float net value
         """
+        if self.is_input_node:
+            return sum([x.value for x in self.inputs])
         return sum([x.value for x in self.inputs]) + self.bias.value
 
     @property
@@ -234,8 +238,12 @@ class MeshLayer:
         :param bias: optional bias input value
         """
         self.label = label
-        self.inputs_in_node = data_size
-        self.nodes = [PerceptronNode(input_data_size=data_size, activation_func=activation_func, layer=self,
+        self.is_input_layer = is_input_layer
+        if self.is_input_layer:
+            input_data_size = 1
+        else:
+            input_data_size = data_size
+        self.nodes = [PerceptronNode(input_data_size=input_data_size, activation_func=activation_func, layer=self,
                                      is_input_node=is_input_layer, bias_val=bias) for _ in range(nodes_number)]
         self.next_layer: Optional['MeshLayer'] = None
         self.previous_layer = None
@@ -282,7 +290,7 @@ class MeshLayer:
         :return: string
         """
         return '{} layer: {} node(s) with {} input(s), id={}'.format(self.label, len(self.nodes),
-                                                                     self.inputs_in_node, id(self))
+                                                                     len(self.nodes[0].inputs), id(self))
 
     def __repr__(self) -> str:
         """Override __repr__ representation
@@ -300,18 +308,21 @@ class NeuralNetwork:
     LEARNING_RATE = 0.15
 
     def __init__(self,
-                 input_layer_nodes_number: int,
+                 data_size: int,
+                 output_data_size: int,
                  hidden_layers_number_of_nodes: Optional[List[int]] = None,
                  hidden_layer_bias: Optional[List[float]] = None,
                  output_layer_bias: Optional[float] = None) -> None:
         """Initialize NeuralNetwork object
 
-        :param input_layer_nodes_number: number of nodes in input layer
+        :param data_size: input vector size - equal to number of nodes of input layer
+        :param output_data_size: output vector length
         :param hidden_layers_number_of_nodes:  [2, 3] - hidden layer #1 - 2 nodes, hidden layer #2 - 3 nodes
         :param hidden_layer_bias: bias values for hidden layers
         :param output_layer_bias: bias value for output layer
         """
-        self.input_layer_nodes_number = input_layer_nodes_number
+        self.data_size = data_size
+        self.output_data_size = output_data_size
         self.input_layer: Optional[MeshLayer] = None
         self.hidden_layers: List[MeshLayer] = []
         self.output_layer: Optional[MeshLayer] = None
@@ -323,16 +334,12 @@ class NeuralNetwork:
         self.hidden_layers_number_of_nodes = [5] if not hidden_layers_number_of_nodes else hidden_layers_number_of_nodes
         assert len(self.hidden_layer_bias) == len(self.hidden_layers_number_of_nodes)
 
-    def initialize(self, data_size: int, output_data_size: int) -> None:
-        """Initialize functionally NeuralNetwork
-
-        :param data_size: size of input vector
-        :param output_data_size: size of output vector
-        """
+    def initialize(self) -> None:
+        """Initialize functionally NeuralNetwork"""
         self.hidden_layers = []
         self.input_layer = MeshLayer(label='input',
-                                     data_size=data_size,
-                                     nodes_number=self.input_layer_nodes_number,
+                                     data_size=self.data_size,
+                                     nodes_number=self.data_size,
                                      is_input_layer=True,
                                      bias=1.0)
         prev_layer = self.input_layer
@@ -347,7 +354,7 @@ class NeuralNetwork:
             prev_layer = hidden_layer
         self.output_layer = MeshLayer(label='output',
                                       data_size=len(prev_layer.nodes),
-                                      nodes_number=output_data_size,
+                                      nodes_number=self.output_data_size,
                                       bias=self.output_layer_bias)
         prev_layer >> self.output_layer
         self._layers = [self.input_layer] + self.hidden_layers + [self.output_layer]
@@ -362,6 +369,17 @@ class NeuralNetwork:
             logger.debug('Output layer nodes = %s', len(self.output_layer.nodes))
             logger.debug(' * Per node inputs: %s', len(self.output_layer.nodes[0].inputs))
 
+    def get_hidden_layer(self, name: str) -> MeshLayer:
+        """Return hidden layer based on name
+
+        :param name: string
+        :return: hidder layer
+        """
+        for h_layer in self.hidden_layers:
+            if h_layer.label == name:
+                return h_layer
+        raise NameError('Could not find hidden layer for provided name = {}'.format(name))
+
     def forward(self, input_data: List[float]) -> np.array:
         """Push data forward through neural network
 
@@ -372,7 +390,53 @@ class NeuralNetwork:
         return self.output_vector
 
     def _backpropagate(self, targets: List[float]) -> None:
-        """Perform back-propagation
+        """Perform back-propagation. Back-propagation in steps:
+
+        Perceptrone node consists of weights (synapses), body (NET) and axon (OUT)
+              ____________________
+        -----| in1       |        |
+        -----| in2       |        |
+        **** |       NET |  OUT   | ---- out value
+        -----| bias      |        |
+             |___________|________|
+
+
+        NET value = sum(in1 * w1 + in2 * w2 + ... + inN * wN) + bias
+        OUT value = activation_function(NET)
+
+        1. Calculate difference between every output it's and target value Eo1 = ((target_o1-out_o1)^2)/2
+        2. Calculate cumulative error values E_tot = sum(Eo1, Eo2...EoN)
+        3. Calculate partial derivative of every output's error with respect to total error (e.g. dEo1/dE_tot)
+                - this allows to understand how total error depends on changes of particular outputs error
+        4. For every Net calculate derivative of output value with respect of Net value.
+        5. For every input's weights (w) in NET, calculate partial derivative with respect to NET value (e.g. dw1h/dNET)
+                - this allows to understand how weight of particular input corresponds to NET value
+                    - denoted as w1_h as it is weight of 1st input of NET from output from hidden layer
+
+        Point 5 can be calculated using delta rule:
+            dEtot/dw1_h = delta_o1 * out_1h
+            whereas
+            delta_o1 = -(target_o1 - out_o1) * out_o1(1 - out_o1)
+
+        6. update wh_1 value with formula: wh_1 = wh_1 - learning_rate * dEtot/dw1_h
+
+        Hidden layer nodes:
+
+        7. Calculate partial derivatives for all outputs of hidden layer with respect to total error:
+            E_tot = sum(Eo1, Eo2...EoN)
+
+            For output 1 of hidden layer this would be:
+            dE_tot/dout_h1 = sum(dE_o1/dout_h1 + dE_o2/dout_h1 + ... + dE_oN/dout_h1)
+
+        Follow the same rules as in point 1...6
+
+        In a nutshell, using delta rule:
+        dE_tot/dw_1 = sum(delta_o1 * w_h0 + ... + delta_o1 * w_hN) * out_h1(1 - out_h1) * input value
+        dE_tot/dw_1 = delta_h1 * input value
+
+
+        Recommended source:
+        https://mattmazur.com/2015/03/17/a-step-by-step-backpropagation-example/
 
         :param targets: list of targeted values used for learning
         """

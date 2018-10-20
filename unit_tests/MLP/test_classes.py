@@ -93,7 +93,9 @@ def test_mesh_layer():
 
 def test_neural_network():
     """Test NeuralNetwork"""
-    network = NeuralNetwork(input_layer_nodes_number=3, hidden_layers_number_of_nodes=[2],
+    network = NeuralNetwork(data_size=2, output_data_size=1, hidden_layers_number_of_nodes=[2],
                             hidden_layer_bias=[0.4], output_layer_bias=0.8)
-    network.initialize(data_size=10, output_data_size=1)
-    assert [len(node.inputs) for node in network.input_layer.nodes] == [10]*3
+    network.initialize()
+    assert [len(node.inputs) for node in network.input_layer.nodes] == [1, 1]
+    assert [len(node.inputs) for node in network.hidden_layers[0].nodes] == [2, 2]
+    assert [len(node.inputs) for node in network.output_layer.nodes] == [2]

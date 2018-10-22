@@ -7,23 +7,26 @@ from typing import Dict
 from NaiveNeurals.MLP.classes import NeuralNetwork
 
 
-def export_model_to_json(neural_network: NeuralNetwork, file_name='model.json') -> None:
+def export_model(neural_network: NeuralNetwork, file_name: str='model.json', export_to_file: bool = False) -> Dict:
     """Export neural network model to json
 
     :param neural_network: NeuralNetwork object
     :param file_name: targeted json file name
+    :param export_to_file: denotes whether model should be exported to json file
+    :return: dictionary with model
     """
     model: Dict[str, Dict] = defaultdict(lambda: defaultdict(dict))
     for layer in neural_network:
-        print(layer)
         for ind, node in enumerate(layer):
             if not node.is_input_node:
                 model['{}'.format(layer.label)]['node_{}'.format(ind)]['bias'] = node.bias.value
             for iind, inp in enumerate(node):
                 model['{}'.format(layer.label)]['node_{}'.format(ind)]['weight_{}'.format(iind)] = inp.weight.value
-    logging.info('Extracting model to file: %s', file_name)
-    with open(file_name, 'w+') as outfile:
-        json.dump(model, outfile)
+    if export_to_file:
+        logging.info('Extracting model to file: %s', file_name)
+        with open(file_name, 'w+') as outfile:
+            json.dump(model, outfile)
+    return model
 
 
 def load_model(model: Dict) -> NeuralNetwork:
@@ -58,7 +61,7 @@ def load_model(model: Dict) -> NeuralNetwork:
     network.initialize()
     for model_h_layer_name in hidden_layers_names:
         model_layer_data = model[model_h_layer_name]
-        network_layer = network.get_hidden_layer(model_h_layer_name)
+        network_layer = network.get_layer(model_h_layer_name)
         for nodel_node_data, network_node in zip(model_layer_data, network_layer.nodes):
             # update network value bias with value from imported model
             network_node.bias.update(model_layer_data[nodel_node_data]['bias'])

@@ -1,7 +1,7 @@
 import logging
 
 from NaiveNeurals.MLP.classes import NeuralNetwork
-from NaiveNeurals.model import export_model_to_json
+from NaiveNeurals.model import export_model
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -10,4 +10,4 @@ if __name__ == '__main__':
     network = NeuralNetwork()
     network.initialize(len(input_data_vector))
     network.feed_with_data(input_data_vector)
-    export_model_to_json(network, file_name='model.json')
+    export_model(network, export_to_file=True)

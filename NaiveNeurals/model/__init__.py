@@ -1,1 +1,1 @@
-from NaiveNeurals.model.functions import export_model_to_json
+from NaiveNeurals.model.functions import export_model

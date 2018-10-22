@@ -357,7 +357,9 @@ class NeuralNetwork:
                                       nodes_number=self.output_data_size,
                                       bias=self.output_layer_bias)
         prev_layer >> self.output_layer
-        self._layers = [self.input_layer] + self.hidden_layers + [self.output_layer]
+        self._layers.append(self.input_layer)
+        self._layers.extend(self.hidden_layers)
+        self._layers.append(self.output_layer)
         if logger.level == logging.DEBUG:
             logger.debug('Initialized Neural Network with parameters:')
             logger.debug('Input layer nodes = %s', len(self.input_layer.nodes))
@@ -369,15 +371,15 @@ class NeuralNetwork:
             logger.debug('Output layer nodes = %s', len(self.output_layer.nodes))
             logger.debug(' * Per node inputs: %s', len(self.output_layer.nodes[0].inputs))
 
-    def get_hidden_layer(self, name: str) -> MeshLayer:
+    def get_layer(self, name: str) -> MeshLayer:
         """Return hidden layer based on name
 
         :param name: string
         :return: hidder layer
         """
-        for h_layer in self.hidden_layers:
-            if h_layer.label == name:
-                return h_layer
+        for layer in self._layers:
+            if layer.label == name:
+                return layer
         raise NameError('Could not find hidden layer for provided name = {}'.format(name))
 
     def forward(self, input_data: List[float]) -> np.array:
@@ -498,3 +500,4 @@ class NeuralNetwork:
         """
         self.forward(inputs)
         return calculate_error(self.output_vector, np.array(targeted))
+

@@ -26,10 +26,10 @@ venv/bin/activate: requirements.txt
 	$(PIP) $(PIP_FLAGS) install -Ur requirements.txt
 	touch venv/bin/activate
 
-test_pytest_unit:
+test_unit:
 	PYTHONPATH=$(PYTHONPATH) $(PYTEST) --verbose --color=yes --cov=$(PROJECT_NAME) --cov-config .coveragerc --tb=short $(UNIT_TESTS_DIR)
 
-test_pytest_functional:
+test_functional:
 	PYTHONPATH=$(PYTHONPATH) $(PYTEST) --verbose --color=yes --cov-config .coveragerc --tb=short $(FUNCTIONAL_TESTS_DIR) -s
 
 test_pylint:

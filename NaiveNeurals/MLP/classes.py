@@ -135,6 +135,8 @@ class Output:
 
         :return: float output value
         """
+        if self.body.layer.is_input_layer:
+            return self.body.net_value
         return self.body.activation_function.function(self.body.net_value)
 
 
@@ -202,8 +204,8 @@ class PerceptronNode:
         :return: float net value
         """
         if self.is_input_node:
-            return sum([x.value for x in self.inputs])
-        return sum([x.value for x in self.inputs]) + self.bias.value
+            return sum([x.value * x.weight.value for x in self.inputs])
+        return sum([x.value * x.weight.value for x in self.inputs]) + self.bias.value
 
     @property
     def output_value(self) -> float:
@@ -278,8 +280,13 @@ class MeshLayer:
         :return:
         """
         logger.debug('Layer = %s, input data is: %s', self.label, input_data)
-        for ind, node in enumerate(self.nodes):
-            node.feed_inputs(input_data)
+        if self.is_input_layer:
+            for in_data, node in zip(input_data, self.nodes):
+                # in input layer every node has only 1 input
+                node.inputs[0].set_value(in_data)
+        else:
+            for node in self.nodes:
+                node.feed_inputs(input_data)
         layer_output = [node.output_value for node in self.nodes]
         if self.next_layer:
             self.next_layer.forward(layer_output)
@@ -332,10 +339,13 @@ class NeuralNetwork:
         self.hidden_layer_bias = hidden_layer_bias if hidden_layer_bias else [-1]
         self.output_layer_bias = output_layer_bias if output_layer_bias else -1
         self.hidden_layers_number_of_nodes = [5] if not hidden_layers_number_of_nodes else hidden_layers_number_of_nodes
+        self._was_initialized = False
         assert len(self.hidden_layer_bias) == len(self.hidden_layers_number_of_nodes)
 
     def initialize(self) -> None:
         """Initialize functionally NeuralNetwork"""
+        if self._was_initialized:
+            return None
         self.hidden_layers = []
         self.input_layer = MeshLayer(label='input',
                                      data_size=self.data_size,
@@ -360,6 +370,7 @@ class NeuralNetwork:
         self._layers.append(self.input_layer)
         self._layers.extend(self.hidden_layers)
         self._layers.append(self.output_layer)
+        self._was_initialized = True
         if logger.level == logging.DEBUG:
             logger.debug('Initialized Neural Network with parameters:')
             logger.debug('Input layer nodes = %s', len(self.input_layer.nodes))

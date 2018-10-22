@@ -33,7 +33,7 @@ class Function(ABC):
 
 
 class Sigmoid(Function):
-    """Represents sigmoid function and its derivative """
+    """Represents sigmoid function and its derivative"""
 
     @staticmethod
     def function(arg: float) -> float:

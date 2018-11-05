@@ -38,11 +38,13 @@ class Layer:
 class NeuralNetwork:
     """Represents neural network object.
 
-    Perceptron node consists of inputs with weights weights (synapses), body (NET) and axon (OUT)
+    Perceptron node consists of inputs (dendrites) with weights, net (soma) and out (axon). In biology, connection
+    between one perceptron and next one is called synapse.
+
             ____________________
     --W1---| in1       |        |
     --W2---| in2       |        |
-     ***** |       NET |  OUT   | ---- out value
+     ***** |       NET |  OUT   | ---- out value -> connection (synapse) -> input_1 of next perceptron
     --WN---| inN       |        |
       ---->|bias(fixed)|        |
            |___________|________|
@@ -52,27 +54,38 @@ class NeuralNetwork:
     Perceptron's NET values is calculated as:
         net_value = sum(inputs * weights) + bias
 
-        bias is a fixed value added to sum of inputs, it's the same for all nodes within layer
+        bias is a fixed value added to sum of inputs, it's the same for all nodes within one layer.
 
-    while Percetpron's OUTPUT can be calculated using formula:
+    Percetpron's OUTPUT can be calculated using formula:
         out_value = activation_function(net_value)
+
+    Characteristics of activation_function contributes greatly to output of neuron. E.g. Sigmoid function is
+    useful for classification problems (where output is supposed to be in one of known "states" like 0, 1).
 
     This Neural Network is implemented as 3 layer network.
 
-    Input layer - is only responsible for passing values to every node of hidden layer.
-                    Every perceptron within this layer has only one input, so number of nodes in this layer
-                    is equal to data size. This layer does not influence input value in any way (no weights).
+    Input layer - is only responsible for passing values to every node of a hidden layer.
+                    Every node within this layer has only one input, so number of nodes in input layer
+                    is equal to data size (if we wish to implement XOR gate with two values then there will be 2 nodes
+                    in input layer and every node will have 1 input).
+                    This layer does not modify input value in any way (weights can be treated as equal to 1).
 
-    Hidden layer - Each perceptron has N inputs connected with OUTPUTS of every node from INPUT layer (thus each
-                    preceptron within HIDDEN layer as many inputs as data size is).
+    Hidden layer - Each node has N inputs connected with OUTPUTS of every node from INPUT layer (thus each
+                    preceptron within HIDDEN layer has as many inputs as input layer data size is).
 
-    Output layer - Amount of perceptron nodes is equal to size of output data. Every node within OUTPUT layer
+    Output layer - Amount of perceptron nodes is equal to size of output data vector. Every node within OUTPUT layer
                     has Z inputs (which is equal to amount of nodes in HIDDEN layer).
+
+    If we would wish to implement XOR gate for 2 input values X, Y, with 2 nodes in hidden layer, we will obtain:
+    1. Input layer with 2 nodes (one for X and one for Y), each will have one input.
+    2. Hidden layer with 2 nodes, each node will have 2 inputs (since there are 2 nodes in input layer) and every input
+        will have it's weight. Each node will also have bias input.
+    3. Output layer with 1 node (as output of a gate is singular value). Node will have two inputs (plus bias as third).
     """
 
-    LEARNING_RATE = 0.1
+    LEARNING_RATE = 0.05
     MAX_EPOCHS = 100_000
-    TARGETED_ERROR_RATE = 0.0001
+    TARGETED_ERROR_RATE = 0.001
 
     def __init__(self) -> None:
         """Initialise neural network"""
@@ -253,8 +266,6 @@ class NeuralNetwork:
 
     def _backwards(self, inputs: np.array, targets: np.array) -> None:
         """Perform back-propagation. Back-propagation in steps:
-
-        Perceptron node consists of weights (synapses), body (NET) and axon (OUT)
               ____________________
         -----| in1       |        |
         -----| in2       |        |
@@ -266,16 +277,16 @@ class NeuralNetwork:
         NET value = sum(in1 * w1 + in2 * w2 + ... + inN * wN) + bias
         OUT value = activation_function(NET)
 
-        1. Calculate difference between every output it's and target value Eo1 = ((target_o1-out_o1)^2)/2
+        1. Calculate difference between every output and targeted value Eo1 = ((target_o1-out_o1)^2)/2
         2. Calculate cumulative error values E_tot = sum(Eo1, Eo2...EoN)
         3. Calculate partial derivative of every output's error with respect to total error (e.g. dEo1/dE_tot)
                 - this allows to understand how total error depends on changes of particular outputs error
-        4. For every Net calculate derivative of output value with respect of Net value.
-        5. For every input's weights (w) in NET, calculate partial derivative with respect to NET value (e.g. dw1h/dNET)
+        4. For every NET calculate derivative of output value with respect of Net value.
+        5. For every input's weights (w) in NET calculate partial derivative with respect to NET value (e.g. dw1h/dNET)
                 - this allows to understand how weight of particular input corresponds to NET value
                     - denoted as w1_h as it is weight of 1st input of NET from output from hidden layer
 
-        Point 5 can be calculated using delta rule:
+        Point 5 can be calculated using delta rule[1]:
             dEtot/dw1_h = delta_o1 * out_1h
             whereas
             delta_o1 = -(target_o1 - out_o1) * out_o1(1 - out_o1)
@@ -297,8 +308,11 @@ class NeuralNetwork:
         dE_tot/dw_1 = delta_h1 * input value
 
         Recommended sources:
-        https://mattmazur.com/2015/03/17/a-step-by-step-backpropagation-example/
-        https://iamtrask.github.io/2015/07/27/python-network-part2/
+        [1] https://mattmazur.com/2015/03/17/a-step-by-step-backpropagation-example/
+        [2] https://iamtrask.github.io/2015/07/27/python-network-part2/
+
+        When talking about implementation - it is FAR BETTER (trust me) to operate on matrices rather than trying
+        to implement as it was written above...
 
         :param inputs: vector of input values
         :param targets: vector of target values

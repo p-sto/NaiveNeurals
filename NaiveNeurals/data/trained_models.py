@@ -1,0 +1,31 @@
+"""Module contains already trained models"""
+
+XOR_MODEL_1 = {'input': {'node_0': {'weight_0': 1}, 'node_1': {'weight_0': 1}},
+               'hidden_1': {'node_0': {'bias': 0,
+                                       'weight_0': -0.8173468448195632,
+                                       'weight_1': -0.8173468448195632},
+                            'node_1': {'bias': 0,
+                                       'weight_0': -25.29623614969602,
+                                       'weight_1': -25.29623614969602}},
+               'output': {'node_0': {'bias': -15,
+                                     'weight_0': 63.35495516086067,
+                                     'weight_1': -44.05644405788728}},
+               'hidden_act_func': 'sigmoid',
+               'output_act_func': 'sigmoid'}
+
+XOR_MODEL_2 = {'input': {'node_0': {'weight_0': 1}, 'node_1': {'weight_0': 1}},
+               'hidden_1': {'node_0': {'bias': 0,
+                                       'weight_0': -0.8679189982913158,
+                                       'weight_1': -0.8679189982913158},
+                            'node_1': {'bias': 0,
+                                       'weight_0': -13.063557995312953,
+                                       'weight_1': -13.063557995312953},
+                            'node_2': {'bias': 0,
+                                       'weight_0': -13.063557995312953,
+                                       'weight_1': -13.063557995312953}},
+               'output': {'node_0': {'bias': -15,
+                                     'weight_0': 66.76535354139006,
+                                     'weight_1': -24.46452639242529,
+                                     'weight_2': -24.46452639242529}},
+               'hidden_act_func': 'sigmoid',
+               'output_act_func': 'sigmoid'}

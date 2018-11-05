@@ -1,411 +1,248 @@
 """Implementation of perceptron neural network from scratch for educational purpose."""
-
 import random
-from collections import defaultdict
-
-import numpy as np
 import logging
 
-from typing import List, Optional
+from typing import Optional, Dict, Any
+import numpy as np
 
-from IteratorDecorator import iter_attribute
-from NaiveNeurals.MLP.functions import Sigmoid, Function, calculate_error
+from NaiveNeurals.MLP.functions import Sigmoid, Function, calculate_error, get_activation_function
+from NaiveNeurals.utils import ErrorAlgorithm, InitialisationError
 
 logger = logging.getLogger('classes')
-logger.setLevel(logging.WARNING)
+logger.setLevel(logging.INFO)
+np.random.seed(1)
 
 
-class Weight:
-    """Represents Weight object."""
+class Layer:
+    """Represents neural network's layer"""
 
-    def __init__(self, init_value: float) -> None:
-        """Initialize Weight object
+    def __init__(self, number_of_nodes: int, bias: float,
+                 weights: np.array, activation_function: Function) -> None:
+        """Initialise Layer object
 
-        :param init_value: default initial value
+        :param number_of_nodes:
+        :param bias:
+        :param activation_function:
+        :param weights:
         """
-        self.value = init_value
-        self.historical_values = []
-
-    def update(self, new_val: float) -> None:
-        """Update weight value
-
-        Updates new weight to new value and stores previous value to statistical purposes
-
-        :param new_val: new weight value
-        """
-        self.historical_values.append(self.value)
-        self.value = new_val
-
-    def __str__(self) -> str:
-        """Override default string representation
-
-        :return: string
-        """
-        return '{}-{}'.format('Weigh', id(self))
+        self.number_of_nodes = number_of_nodes
+        self.bias = bias
+        self.activation_function = activation_function
+        self.weights = weights
+        self.node_values = None
+        self.output = None
 
 
-class Input:
-    """Represents perceptron input object.
+class NeuralNetwork:
+    """Represents neural network object.
 
-    Every input has value multiplied by input's weight.
+    Perceptron node consists of inputs with weights weights (synapses), body (NET) and axon (OUT)
+            ____________________
+    --W1---| in1       |        |
+    --W2---| in2       |        |
+     ***** |       NET |  OUT   | ---- out value
+    --WN---| inN       |        |
+      ---->|bias(fixed)|        |
+           |___________|________|
 
-    -> Input value * Input weight value -> Perceptron
+    Each perceptron consists of N inputs and 1 output.
+
+    Perceptron's NET values is calculated as:
+        net_value = sum(inputs * weights) + bias
+
+        bias is a fixed value added to sum of inputs, it's the same for all nodes within layer
+
+    while Percetpron's OUTPUT can be calculated using formula:
+        out_value = activation_function(net_value)
+
+    This Neural Network is implemented as 3 layer network.
+
+    Input layer - is only responsible for passing values to every node of hidden layer.
+                    Every perceptron within this layer has only one input, so number of nodes in this layer
+                    is equal to data size. This layer does not influence input value in any way (no weights).
+
+    Hidden layer - Each perceptron has N inputs connected with OUTPUTS of every node from INPUT layer (thus each
+                    preceptron within HIDDEN layer as many inputs as data size is).
+
+    Output layer - Amount of perceptron nodes is equal to size of output data. Every node within OUTPUT layer
+                    has Z inputs (which is equal to amount of nodes in HIDDEN layer).
     """
 
-    def __init__(self, body: 'PerceptronNode', initial_weight: float) -> None:
-        """Initialize Input object
+    LEARNING_RATE = 0.1
+    MAX_EPOCHS = 100_000
+    TARGETED_ERROR_RATE = 0.0001
 
-        :param body: reference to perceptron connected to Input
-        :param initial_weight: float initial weight value
-        """
-        self.body = body
-        self.value = None
-        self.weight = Weight(initial_weight)
-        self._value_to_be_set = None
-        self.preceding: List[Output] = []   # list of Outputs from previous layer connected to this input
+    def __init__(self) -> None:
+        """Initialise neural network"""
+        self._was_initialized = False
 
-    @property
-    def is_connected(self) -> bool:
-        """Denotes whether outputs from previous layer are connected to this input.
-
-        :return: True/False
-        """
-        return bool(self.preceding)
-
-    def set_value(self, value: float) -> None:
-        """Sets input value.
-
-        :param value: represents input value
-        """
-        self.value = value
-
-    def weight_value_after_epoch(self, value_to_be_set: float) -> None:
-        """Register weigh value which will be updated after training epoch"""
-        self._value_to_be_set = value_to_be_set
-
-    def update_weights(self) -> None:
-        """Update weight value related to input"""
-        self.weight.update(self._value_to_be_set)
-
-    def __repr__(self) -> str:
-        return 'value={}, weight={}, is_connected={}, id={}'.format(self.value, self.weight.value,
-                                                                    self.is_connected, id(self))
-
-
-class Bias(Weight):
-    """Represents BIAS input"""
-
-    def __str__(self) -> str:
-        """Override string representation
-
-        :return: string
-        """
-        return '{}-{}'.format('Bias', id(self))
-
-
-class Output:
-    """Represents Perceptron's Output"""
-
-    def __init__(self, body: 'PerceptronNode') -> None:
-        """Initialize Output object
-
-        :param body: reference to perceptron connected to Output
-        """
-        self.body = body
-        self.following: List[Input] = []    # list of inputs of next layer connected to this output
-
-    def connect(self, inp: Input) -> None:
-        """Connect outut to input of next perceptron
-
-        :param inp: Input of next connected perceptron
-        """
-        self.following.append(inp)
+        # not defining input layer as it's only passes values to hidden layer
+        self.hidden_layer: Optional[Layer] = None
+        self.output_layer: Optional[Layer] = None
+        self.input_data_size: Optional[int] = None
 
     @property
-    def is_connected(self) -> bool:
-        """Denotes whether output is connected to any input of next layer
+    def output(self) -> np.array:
+        """Return neural network output vector.
 
-        :return: True/False
+        :return: vector of floats
         """
-        return bool(self.following)
+        return self.output_layer.output
 
-    @property
-    def value(self) -> float:
-        """Calculated output value
+    def errors(self, targets: np.array) -> np.array:
+        """Return vector of errors for particular learning data.
 
-        :return: float output value
+        :param targets: array with target values
+        :return: vector of floats
         """
-        if self.body.layer.is_input_layer:
-            return self.body.net_value
-        return self.body.activation_function.function(self.body.net_value)
+        return calculate_error(self.output, targets.T, func_type=ErrorAlgorithm.SQR)
 
+    def cumulative_error_rate(self, targets: np.array) -> float:
+        """Return cumulative error rate for all training data.
 
-@iter_attribute('inputs')
-class PerceptronNode:
-    """Perceptron model:
-
-          ____________________
-    -----| in1       |        |
-    -----| in2       |        |
-    **** |       NET |  OUT   | ---- out value
-    -----| bias      |        |
-         |___________|________|
-
-    net_value = sum(inputs * weights)
-    out_value = activation_function(net_value)
-    """
-
-    # pylint: disable=too-many-arguments
-    def __init__(self, input_data_size: int, bias_val: float = -1, activation_func: Function = Sigmoid,
-                 layer: 'MeshLayer' = None, is_input_node: bool = False) -> None:
-        """Initialize PerceptronNode object
-
-        :param input_data_size: length of input data vector
-        :param bias_val: bias value
-        :param activation_func: type of activation function
-        :param layer: MeshLayer object to which this Percetron belongs
-        :param is_input_node: boolean value denoting whether this perceptron is an input node
-        """
-        self.inputs: List[Input] = [Input(self, random.uniform(-0.5, 0.5)) for _ in range(input_data_size)]
-        self.output = Output(self)
-        self.bias = None
-        self.activation_function = activation_func
-        self.layer = layer
-        self.is_input_node = is_input_node
-        if not self.is_input_node:
-            self.bias = Bias(bias_val) if bias_val else Bias(1.0)
-        # if it's input layer node then weights will be se to 1
-        if self.is_input_node:
-            _ = [inp.weight.update(1) for inp in self.inputs]
-
-    def feed_inputs(self, input_vec: List[float]) -> None:
-        """Fill inputs with data
-
-        :param input_vec: input vector of floats
-        """
-        if len(input_vec) != len(self.inputs):
-            description = 'Impedance mismatch! Data size = {}, inputs number = {}, ' \
-                          'layer = {}!'.format(len(input_vec), len(self.inputs), self.layer)
-            raise ValueError(description)
-        _ = [inp.set_value(val) for inp, val in zip(self.inputs, input_vec)]
-
-    def connect_output(self, next_input: Input) -> None:
-        """Connect output to next inputs
-
-        :param next_input:
-        """
-        self.output.connect(next_input)
-        next_input.preceding.append(self.output)
-
-    @property
-    def net_value(self) -> float:
-        """Return net value
-
-        :return: float net value
-        """
-        if self.is_input_node:
-            return sum([x.value * x.weight.value for x in self.inputs])
-        return sum([x.value * x.weight.value for x in self.inputs]) + self.bias.value
-
-    @property
-    def output_value(self) -> float:
-        """Return output value
-
+        :param targets: array with target values
         :return: float value
         """
-        return self.output.value
+        return sum(self.errors(targets))
 
-    def __str__(self) -> str:
-        """Override string representation
+    # pylint: disable=too-many-locals
+    def load_model(self, _model: Dict) -> None:
+        """Load neural network parameters from model.
 
-        :return: string
+        :param _model: dictionary representing model
         """
-        return 'Inputs: {} Following items: {}'.format(len(self.inputs), len(self.output.following))
+        model = dict(_model)
+        hidden_layer_act_func = get_activation_function(model.pop('hidden_act_func'))
+        output_layer_act_func = get_activation_function(model.pop('output_act_func'))
+        input_layer_data = model.get('input')
 
+        hidden_layers_model = model.get('hidden_1')
+        output_layer_data = model.get('output')
+        assert input_layer_data, 'Could not retrieve input layer data from model'
+        assert hidden_layers_model, 'Could not retrieve hidden layers data from model'
+        assert output_layer_data, 'Could not retrieve output layer data from model'
+        data_size = len(input_layer_data)
+        output_data_size = len(output_layer_data)
+        output_layer_bias = output_layer_data['node_0'].get('bias')
+        assert output_layer_bias is not None, 'No bias for output layer'
+        hidden_layers_number_of_nodes = len(hidden_layers_model)
+        hidden_layers_biases = hidden_layers_model['node_0']['bias']
+        assert hidden_layers_biases is not None, 'No bias for hidden layer'
+        logger.info('Data size = %s', data_size)
+        logger.info('Output data size = %s', output_data_size)
+        logger.info('Hidden layer number of nodes = %s', hidden_layers_number_of_nodes)
+        logger.info('Hidden layer biases = %s', hidden_layers_biases)
+        logger.info('Output layer bias = %s', output_layer_bias)
 
-@iter_attribute('nodes')
-class MeshLayer:
-    """MeshLayer consists of several nodes"""
+        hidden_layer_weights = np.zeros((data_size, hidden_layers_number_of_nodes))
+        output_layer_weights = np.zeros((hidden_layers_number_of_nodes, output_data_size))
+
+        self.input_data_size = data_size
+        self.hidden_layer = Layer(hidden_layers_number_of_nodes, hidden_layers_biases,
+                                  hidden_layer_weights, hidden_layer_act_func)
+        self.output_layer = Layer(output_data_size, output_layer_bias, output_layer_weights,
+                                  output_layer_act_func)
+
+        for n_ind, node in enumerate(model['hidden_1']):
+            weights = sorted([x for x in model['hidden_1'][node] if x != 'bias'])
+            for w_ind, weight in enumerate(weights):
+                self.hidden_layer.weights[w_ind][n_ind] = model['hidden_1'][node][weight]
+
+        for n_ind, node in enumerate(model['output']):
+            weights = sorted([x for x in model['output'][node] if x != 'bias'])
+            for w_ind, weight in enumerate(weights):
+                self.output_layer.weights[w_ind][n_ind] = model['output'][node][weight]
+
+        self._was_initialized = True
+
+    def export_model(self) -> Dict[str, Any]:
+        """Export model to dictionary.
+
+        :return: dictionary with model
+        """
+
+        model = {'input': {}, 'hidden_1': {}, 'output': {}}
+
+        input_weights = {}
+        for ind in range(self.input_data_size):
+            input_weights['node_{}'.format(ind)] = {'weight_0': 1}
+        model['input'].update(input_weights)
+
+        hidden_weights = {}
+        for ind in range(self.hidden_layer.weights.T.shape[0]):
+            hidden_weights['node_{}'.format(ind)] = {'bias': self.hidden_layer.bias}
+        for col_ind, column in enumerate(self.hidden_layer.weights.T):
+            for row_ind, val in enumerate(column):
+                hidden_weights['node_{}'.format(col_ind)]['weight_{}'.format(row_ind)] = val
+        model['hidden_1'].update(hidden_weights)
+
+        output_weights = {}
+        for ind in range(self.output_layer.weights.T.shape[0]):
+            output_weights['node_{}'.format(ind)] = {'bias': self.output_layer.weights}
+        for col_ind, column in enumerate(self.output_layer.weights.T):
+            for row_ind, val in enumerate(column):
+                output_weights['node_{}'.format(col_ind)]['weight_{}'.format(row_ind)] = val
+        model['output'].update(output_weights)
+
+        model['hidden_act_func'] = self.hidden_layer.activation_function.label
+        model['output_act_func'] = self.output_layer.activation_function.label
+
+        return model
 
     # pylint: disable=too-many-arguments
-    def __init__(self, label: str, data_size: int, nodes_number: int = 5, activation_func: Function = Sigmoid,
-                 is_input_layer: bool = False, bias: Optional[float] = None) -> None:
-        """Initialize MeshLayer object
+    def setup_network(self, input_data_size: int, output_data_size: int, hidden_layer_number_of_nodes: int,
+                      hidden_layer_bias: Optional[float] = 0, output_layer_bias: Optional[float] = 0,
+                      hidden_layer_act_func: Function = Sigmoid, output_layer_act_func: Function = Sigmoid,
+                      weights_range: Optional[int] = None) -> None:
+        """Setup neural network
 
-        :param label: name of layer
-        :param data_size: size of input vector length
-        :param nodes_number: number of perceptron nodes in layer
-        :param activation_func: activation function
-        :param is_input_layer: denote whether this is input layer or not
-        :param bias: optional bias input value
+        :param input_data_size: input data size aka how many inputs are in input layer
+        :param output_data_size: defines size of output vector
+        :param hidden_layer_number_of_nodes: number of nodes in hidden layer
+        :param hidden_layer_bias: value of hidden layer bias
+        :param output_layer_bias: value of output layer bias
+        :param hidden_layer_act_func: hidden layer activation function
+        :param output_layer_act_func: output layer activation function
+        :param weights_range: denotes range of weights
         """
-        self.label = label
-        self.is_input_layer = is_input_layer
-        if self.is_input_layer:
-            input_data_size = 1
-        else:
-            input_data_size = data_size
-        self.nodes = [PerceptronNode(input_data_size=input_data_size, activation_func=activation_func, layer=self,
-                                     is_input_node=is_input_layer, bias_val=bias) for _ in range(nodes_number)]
-        self.next_layer: Optional['MeshLayer'] = None
-        self.previous_layer = None
-        self._i = 0
-        self.activation_func = activation_func
-
-    def __rshift__(self, other: 'MeshLayer') -> 'MeshLayer':
-        """Override right shift operator to allow layer easy connection.
-
-        input_layer >> hidden_layer >> output_layer
-
-        :param other: MeshLayer which inputs has to be connected to this layer output
-        :return: MeshLayer layer object
-        """
-        assert isinstance(other, MeshLayer), 'Provided element is not instance of MeshLayer.'
-        self.next_layer = other
-        other.previous_layer = self
-        for this_node in self.nodes:
-            for next_node in other.nodes:
-                for next_inp in next_node.inputs:
-                    if not next_inp.is_connected:
-                        this_node.connect_output(next_inp)
-                        # ok, connect output of a node to first unconnected
-                        # input from the next layer
-                        break
-        return other
-
-    def forward(self, input_data: List[float]) -> None:
-        """Push data into network
-
-        :param input_data:
-        :return:
-        """
-        logger.debug('Layer = %s, input data is: %s', self.label, input_data)
-        if self.is_input_layer:
-            for in_data, node in zip(input_data, self.nodes):
-                # in input layer every node has only 1 input
-                node.inputs[0].set_value(in_data)
-        else:
-            for node in self.nodes:
-                node.feed_inputs(input_data)
-        layer_output = [node.output_value for node in self.nodes]
-        if self.next_layer:
-            self.next_layer.forward(layer_output)
-
-    def __str__(self) -> str:
-        """Override string representation
-
-        :return: string
-        """
-        return '{} layer: {} node(s) with {} input(s), id={}'.format(self.label, len(self.nodes),
-                                                                     len(self.nodes[0].inputs), id(self))
-
-    def __repr__(self) -> str:
-        """Override __repr__ representation
-
-        :return: string
-        """
-        return self.__str__()
-
-
-@iter_attribute('_layers')
-class NeuralNetwork:
-    """Connects multiple mesh layers into one network. Delivers methods for learning."""
-
-    _MAX_EPOCHS = 100
-    LEARNING_RATE = 0.15
-
-    def __init__(self,
-                 data_size: int,
-                 output_data_size: int,
-                 hidden_layers_number_of_nodes: Optional[List[int]] = None,
-                 hidden_layer_bias: Optional[List[float]] = None,
-                 output_layer_bias: Optional[float] = None) -> None:
-        """Initialize NeuralNetwork object
-
-        :param data_size: input vector size - equal to number of nodes of input layer
-        :param output_data_size: output vector length
-        :param hidden_layers_number_of_nodes:  [2, 3] - hidden layer #1 - 2 nodes, hidden layer #2 - 3 nodes
-        :param hidden_layer_bias: bias values for hidden layers
-        :param output_layer_bias: bias value for output layer
-        """
-        self.data_size = data_size
-        self.output_data_size = output_data_size
-        self.input_layer: Optional[MeshLayer] = None
-        self.hidden_layers: List[MeshLayer] = []
-        self.output_layer: Optional[MeshLayer] = None
-        self.total_epochs = 0
-        self.error_rates = []
-        self._layers: List[MeshLayer] = []
-        self.hidden_layer_bias = hidden_layer_bias if hidden_layer_bias else [-1]
-        self.output_layer_bias = output_layer_bias if output_layer_bias else -1
-        self.hidden_layers_number_of_nodes = [5] if not hidden_layers_number_of_nodes else hidden_layers_number_of_nodes
-        self._was_initialized = False
-        assert len(self.hidden_layer_bias) == len(self.hidden_layers_number_of_nodes)
-
-    def initialize(self) -> None:
-        """Initialize functionally NeuralNetwork"""
         if self._was_initialized:
-            return None
-        self.hidden_layers = []
-        self.input_layer = MeshLayer(label='input',
-                                     data_size=self.data_size,
-                                     nodes_number=self.data_size,
-                                     is_input_layer=True,
-                                     bias=1.0)
-        prev_layer = self.input_layer
-        for ind in range(len(self.hidden_layers_number_of_nodes)):
-            hidden_layer = MeshLayer(label='hidden_{}'.format(ind + 1),
-                                     data_size=len(prev_layer.nodes),
-                                     nodes_number=self.hidden_layers_number_of_nodes[ind],
-                                     bias=self.hidden_layer_bias[ind])
+            return
 
-            self.hidden_layers.append(hidden_layer)
-            prev_layer >> hidden_layer
-            prev_layer = hidden_layer
-        self.output_layer = MeshLayer(label='output',
-                                      data_size=len(prev_layer.nodes),
-                                      nodes_number=self.output_data_size,
-                                      bias=self.output_layer_bias)
-        prev_layer >> self.output_layer
-        self._layers.append(self.input_layer)
-        self._layers.extend(self.hidden_layers)
-        self._layers.append(self.output_layer)
+        if not weights_range:
+            scale = 1
+        else:
+            scale = weights_range
+
+        self.input_data_size = input_data_size
+
+        hidden_layer_weights = scale * (np.random.random((input_data_size, hidden_layer_number_of_nodes)) - 0.5)
+        output_layer_weights = scale * (np.random.random((hidden_layer_number_of_nodes, output_data_size)) - 0.5)
+
+        self.hidden_layer = Layer(hidden_layer_number_of_nodes, hidden_layer_bias,
+                                  hidden_layer_weights, hidden_layer_act_func)
+        self.output_layer = Layer(output_data_size, output_layer_bias, output_layer_weights,
+                                  output_layer_act_func)
+
         self._was_initialized = True
-        if logger.level == logging.DEBUG:
-            logger.debug('Initialized Neural Network with parameters:')
-            logger.debug('Input layer nodes = %s', len(self.input_layer.nodes))
-            logger.debug(' * Per node inputs: %s', len(self.input_layer.nodes[0].inputs))
 
-            for hidden_layer in self.hidden_layers:
-                logger.debug('%s nodes = %s', hidden_layer.label, len(hidden_layer.nodes))
-                logger.debug(' * Per node inputs: %s', len(hidden_layer.nodes[0].inputs))
-            logger.debug('Output layer nodes = %s', len(self.output_layer.nodes))
-            logger.debug(' * Per node inputs: %s', len(self.output_layer.nodes[0].inputs))
+    def forward(self, inputs: np.array) -> None:
+        """Push data forward through network
 
-    def get_layer(self, name: str) -> MeshLayer:
-        """Return hidden layer based on name
-
-        :param name: string
-        :return: hidder layer
+        :param inputs: vector of input data
         """
-        for layer in self._layers:
-            if layer.label == name:
-                return layer
-        raise NameError('Could not find hidden layer for provided name = {}'.format(name))
+        self.hidden_layer.node_values = inputs.T.dot(self.hidden_layer.weights) + self.hidden_layer.bias
 
-    def forward(self, input_data: List[float]) -> np.array:
-        """Push data forward through neural network
+        self.hidden_layer.output = self.hidden_layer.activation_function.function(self.hidden_layer.node_values)
 
-        :param input_data: data from input vector
-        :return: output vector representing values calculated by network
-        """
-        self.input_layer.forward(input_data)
-        return self.output_vector
+        self.output_layer.node_values = self.hidden_layer.output.dot(self.output_layer.weights)
+        self.output_layer.node_values += self.output_layer.bias
 
-    def _backpropagate(self, targets: List[float]) -> None:
+        self.output_layer.output = self.output_layer.activation_function.function(self.output_layer.node_values)
+
+    def _backwards(self, inputs: np.array, targets: np.array) -> None:
         """Perform back-propagation. Back-propagation in steps:
 
-        Perceptrone node consists of weights (synapses), body (NET) and axon (OUT)
+        Perceptron node consists of weights (synapses), body (NET) and axon (OUT)
               ____________________
         -----| in1       |        |
         -----| in2       |        |
@@ -447,68 +284,35 @@ class NeuralNetwork:
         dE_tot/dw_1 = sum(delta_o1 * w_h0 + ... + delta_o1 * w_hN) * out_h1(1 - out_h1) * input value
         dE_tot/dw_1 = delta_h1 * input value
 
-
-        Recommended source:
+        Recommended sources:
         https://mattmazur.com/2015/03/17/a-step-by-step-backpropagation-example/
+        https://iamtrask.github.io/2015/07/27/python-network-part2/
 
-        :param targets: list of targeted values used for learning
+        :param inputs: vector of input values
+        :param targets: vector of target values
         """
-        output_errors = []
-        derivative_values = defaultdict(list)
-        delta_values = {}
-        for ind, node in enumerate(self.output_layer.nodes):
-            output_errors.append(node.output_value - targets[ind])
-            derivative_values[self.output_layer].append(node.activation_function.prime(node.output_value))
-            delta_values[ind] = output_errors[ind] * derivative_values[self.output_layer][ind]
-            for inp in node.inputs:
-                # new weight value is derived from difference between current value and
-                # multiplication of learning rate, calculated delta AND output from previous layer (so input val)
-                inp.weight_value_after_epoch(inp.weight.value - self.LEARNING_RATE * delta_values[ind] * inp.value)
-        for layer in self.hidden_layers:
-            for node in layer.nodes:
-                delta = 0
-                # this is crazy!
-                for ind, err_value in enumerate(output_errors):
-                    delta += err_value * layer.next_layer.activation_func.function(node.output.following[ind].value) *\
-                             node.output.following[ind].weight.value
-                for inp in node.inputs:
-                    delta = delta * layer.activation_func.function(node.output.value) * inp.value
-                    inp.weight_value_after_epoch(inp.weight.value - self.LEARNING_RATE * delta * inp.value)
+        output_layer_errors = self.output_layer.output - targets.T
+        output_layer_delta = output_layer_errors * self.output_layer.activation_function.prime(self.output_layer.output)
 
-        # we have all weights calculated so now we can finally update them
-        for node in self.output_layer:
-            for inp in node:
-                inp.update_weights()
-        for layer in self.hidden_layers:
-            for node in layer:
-                for inp in node:
-                    inp.update_weights()
+        hidden_layer_error = output_layer_delta.dot(self.output_layer.weights.T)
+        hidden_layer_delta = hidden_layer_error * self.hidden_layer.activation_function.prime(self.hidden_layer.output)
+        hidden_layer_updates = self.LEARNING_RATE * inputs.dot(hidden_layer_delta)
+        self.hidden_layer.weights -= hidden_layer_updates * random.randint(1, 3)
 
-    @property
-    def output_vector(self) -> np.array:
-        """Return calculated output vector
+        output_layer_weights_updates = self.LEARNING_RATE * self.hidden_layer.output.T.dot(output_layer_delta)
+        self.output_layer.weights -= output_layer_weights_updates * random.randint(1, 3)
 
-        :return: np.array object
+    def train(self, inputs: np.array, targets: np.array) -> None:
+        """Perform training of network for given inputs and targets
+
+        :param inputs: vector of input data
+        :param targets: vector of targeted values
         """
-        return np.asarray([node.output_value for node in self.output_layer.nodes])
-
-    def train(self, sample: List[float], targets: List[float], error_rate: float = 0.2) -> None:
-        """Perform training of neural network
-
-        :param sample: data to be pushed forward through neural network
-        :param targets: targeted values to be achieved for given input data
-        :param error_rate: targeted error rate between output vector and input data
-        """
-        self.forward(sample)
-        self._backpropagate(targets)
-
-    def error_rate(self, inputs: List[float], targeted: List[float]) -> float:
-        """Get error rate between provided input and output
-
-        :param inputs: vector of inputs
-        :param targeted: vector of outputs
-        :return: float number
-        """
+        if not self._was_initialized:
+            raise InitialisationError('Network was not initialised!')
+        _count = 0
         self.forward(inputs)
-        return calculate_error(self.output_vector, np.array(targeted))
-
+        while self.cumulative_error_rate(targets) > self.TARGETED_ERROR_RATE and _count < self.MAX_EPOCHS:
+            self.forward(inputs)
+            self._backwards(inputs, targets)
+            _count += 1

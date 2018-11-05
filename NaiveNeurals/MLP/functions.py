@@ -1,6 +1,5 @@
 """Module containing definitions of arithmetic functions used by perceptrons"""
 
-import math
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -11,9 +10,11 @@ from NaiveNeurals.utils import ErrorAlgorithm
 class Function(ABC):
     """Abstract function for defining functions"""
 
+    label = None
+
     @staticmethod
     @abstractmethod
-    def function(arg: float) -> float:
+    def function(arg: np.array) -> np.array:
         """Implementation of function
 
         :param arg: float
@@ -23,7 +24,7 @@ class Function(ABC):
 
     @classmethod
     @abstractmethod
-    def prime(cls, arg: float) -> float:
+    def prime(cls, arg: np.array) -> np.array:
         """First derivative of implemented function
 
         :param arg: float
@@ -35,17 +36,19 @@ class Function(ABC):
 class Sigmoid(Function):
     """Represents sigmoid function and its derivative"""
 
+    label = 'sigmoid'
+
     @staticmethod
-    def function(arg: float) -> float:
+    def function(arg: np.array) -> np.array:
         """Calculate sigmoid(arg)
 
         :param arg: float input value
         :return: float sig(arg) value
         """
-        return 1 / (1 + math.exp(-arg))
+        return 1 / (1 + np.exp(-arg))
 
     @classmethod
-    def prime(cls, arg: float) -> float:
+    def prime(cls, arg: np.array) -> np.array:
         """Calculate value of sigmoid's prime derivative for given arg
 
         :param arg: float input value
@@ -54,7 +57,19 @@ class Sigmoid(Function):
         return cls.function(arg) * (1 - cls.function(arg))
 
 
-def calculate_error(target: np.array, actual: np.array, func_type: ErrorAlgorithm = ErrorAlgorithm.SQR) -> float:
+def get_activation_function(label: str) -> Function:
+    """Get activation function by label
+
+    :param label: string denoting function
+    :return: callable function
+    """
+    if label == 'sigmoid':
+        return Sigmoid
+    return Sigmoid
+
+
+def calculate_error(target: np.array, actual: np.array,
+                    func_type: ErrorAlgorithm = ErrorAlgorithm.SQR) -> np.array:
     """Calculates error for provided actual and targeted data.
 
     :param target: target data
@@ -63,5 +78,5 @@ def calculate_error(target: np.array, actual: np.array, func_type: ErrorAlgorith
     :return: calculated error
     """
     if func_type == ErrorAlgorithm.SQR:
-        return 0.5 * pow(sum(actual - target), 2)
+        return np.sum(0.5 * np.power(actual - target, 2), axis=1)
     raise NotImplementedError()

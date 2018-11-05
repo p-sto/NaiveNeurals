@@ -10,7 +10,7 @@ from NaiveNeurals.utils import ErrorAlgorithm
 class Function(ABC):
     """Abstract function for defining functions"""
 
-    label = None
+    label = ''
 
     @staticmethod
     @abstractmethod
@@ -64,8 +64,8 @@ def get_activation_function(label: str) -> Function:
     :return: callable function
     """
     if label == 'sigmoid':
-        return Sigmoid
-    return Sigmoid
+        return Sigmoid()
+    return Sigmoid()
 
 
 def calculate_error(target: np.array, actual: np.array,

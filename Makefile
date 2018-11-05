@@ -36,12 +36,12 @@ test_pylint:
 	find $(PROJECT_NAME) -name '*.py' | xargs $(PYLINT) --rcfile=$(PWD)/.pylintrc
 
 test_gen_coverage_rep:
-	$(COVERAGE) report
+	$(COVERAGE) report --fail-under=90
 
 test_mypy:
 	find $(PROJECT_NAME) -name '*.py' | xargs $(MYPY) $(MYPYFLAGS)
 
-test: test_pylint test_mypy test_pytest_unit test_pytest_functional test_gen_coverage_rep
+test: test_pylint test_mypy test_unit test_functional test_gen_coverage_rep
 
 clean:
 	rm -rf htmlcov

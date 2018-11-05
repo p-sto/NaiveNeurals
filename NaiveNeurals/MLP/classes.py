@@ -1,11 +1,13 @@
 """Implementation of perceptron neural network from scratch for educational purpose."""
 import random
 import logging
+from numbers import Real
 
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union, List
 import numpy as np
 
 from NaiveNeurals.MLP.functions import Sigmoid, Function, calculate_error, get_activation_function
+from NaiveNeurals.training.misc import TrainingData
 from NaiveNeurals.utils import ErrorAlgorithm, InitialisationError
 
 logger = logging.getLogger('classes')
@@ -87,6 +89,8 @@ class NeuralNetwork:
 
         :return: vector of floats
         """
+        if not self.output_layer:
+            raise InitialisationError
         return self.output_layer.output
 
     def errors(self, targets: np.array) -> np.array:
@@ -160,8 +164,10 @@ class NeuralNetwork:
 
         :return: dictionary with model
         """
-
-        model = {'input': {}, 'hidden_1': {}, 'output': {}}
+        assert isinstance(self.hidden_layer, Layer)
+        assert isinstance(self.output_layer, Layer)
+        assert self.input_data_size
+        model: Dict = {'input': {}, 'hidden_1': {}, 'output': {}}
 
         input_weights = {}
         for ind in range(self.input_data_size):
@@ -191,8 +197,8 @@ class NeuralNetwork:
 
     # pylint: disable=too-many-arguments
     def setup_network(self, input_data_size: int, output_data_size: int, hidden_layer_number_of_nodes: int,
-                      hidden_layer_bias: Optional[float] = 0, output_layer_bias: Optional[float] = 0,
-                      hidden_layer_act_func: Function = Sigmoid, output_layer_act_func: Function = Sigmoid,
+                      hidden_layer_bias: float = 0.0, output_layer_bias: float = 0.0,
+                      hidden_layer_act_func: Function = Sigmoid(), output_layer_act_func: Function = Sigmoid(),
                       weights_range: Optional[int] = None) -> None:
         """Setup neural network
 
@@ -225,19 +231,25 @@ class NeuralNetwork:
 
         self._was_initialized = True
 
-    def forward(self, inputs: np.array) -> None:
+    def forward(self, inputs: Union[np.array, List[List[Real]]]) -> np.array:
         """Push data forward through network
 
         :param inputs: vector of input data
         """
+        if isinstance(inputs, List):
+            inputs = np.array(inputs)
+        assert isinstance(self.hidden_layer, Layer)
+        assert isinstance(self.output_layer, Layer)
+
         self.hidden_layer.node_values = inputs.T.dot(self.hidden_layer.weights) + self.hidden_layer.bias
 
         self.hidden_layer.output = self.hidden_layer.activation_function.function(self.hidden_layer.node_values)
-
+        assert self.hidden_layer.output is not None
         self.output_layer.node_values = self.hidden_layer.output.dot(self.output_layer.weights)
         self.output_layer.node_values += self.output_layer.bias
 
         self.output_layer.output = self.output_layer.activation_function.function(self.output_layer.node_values)
+        return self.output
 
     def _backwards(self, inputs: np.array, targets: np.array) -> None:
         """Perform back-propagation. Back-propagation in steps:
@@ -291,6 +303,9 @@ class NeuralNetwork:
         :param inputs: vector of input values
         :param targets: vector of target values
         """
+        assert isinstance(self.hidden_layer, Layer)
+        assert isinstance(self.output_layer, Layer)
+        assert self.hidden_layer.output
         output_layer_errors = self.output_layer.output - targets.T
         output_layer_delta = output_layer_errors * self.output_layer.activation_function.prime(self.output_layer.output)
 
@@ -302,17 +317,16 @@ class NeuralNetwork:
         output_layer_weights_updates = self.LEARNING_RATE * self.hidden_layer.output.T.dot(output_layer_delta)
         self.output_layer.weights -= output_layer_weights_updates * random.randint(1, 3)
 
-    def train(self, inputs: np.array, targets: np.array) -> None:
+    def train(self, dataset: TrainingData) -> None:
         """Perform training of network for given inputs and targets
 
-        :param inputs: vector of input data
-        :param targets: vector of targeted values
+        :param dataset: TrainingData object with inputs and targets
         """
         if not self._was_initialized:
             raise InitialisationError('Network was not initialised!')
         _count = 0
-        self.forward(inputs)
-        while self.cumulative_error_rate(targets) > self.TARGETED_ERROR_RATE and _count < self.MAX_EPOCHS:
-            self.forward(inputs)
-            self._backwards(inputs, targets)
+        self.forward(dataset.inputs)
+        while self.cumulative_error_rate(dataset.targets) > self.TARGETED_ERROR_RATE and _count < self.MAX_EPOCHS:
+            self.forward(dataset.inputs)
+            self._backwards(dataset.inputs, dataset.targets)
             _count += 1

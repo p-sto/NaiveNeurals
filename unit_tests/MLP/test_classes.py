@@ -1,7 +1,6 @@
 """Module contains test for MLP classes"""
 
 from NaiveNeurals.MLP.classes import NeuralNetwork
-from NaiveNeurals.MLP.functions import Sigmoid
 
 inputs = [[0, 0, 1, 1], [0, 1, 0, 1]]
 targets = [[0, 1, 1, 0]]

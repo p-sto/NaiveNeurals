@@ -6,7 +6,7 @@ from NaiveNeurals.MLP.functions import get_activation_function, Sigmoid, calcula
 
 
 def test_get_activation_function():
-    assert get_activation_function('sigmoid') == Sigmoid
+    assert isinstance(get_activation_function('sigmoid'), Sigmoid)
 
 
 def test_calculate_error():

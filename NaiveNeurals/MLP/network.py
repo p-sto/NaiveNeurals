@@ -1,13 +1,12 @@
 """Implementation of perceptron neural network from scratch for educational purpose."""
-import random
 import logging
 from numbers import Real
 
-from typing import Optional, Dict, Any, Union, List
+from typing import Optional, Dict, Any, Union, List, cast
 import numpy as np
 
 from NaiveNeurals.MLP.functions import Sigmoid, Function, calculate_error, get_activation_function
-from NaiveNeurals.training.misc import TrainingData
+from NaiveNeurals.data.dataset import TrainingDataSet
 from NaiveNeurals.utils import ErrorAlgorithm, InitialisationError
 
 logger = logging.getLogger('classes')
@@ -22,10 +21,10 @@ class Layer:
                  weights: np.array, activation_function: Function) -> None:
         """Initialise Layer object
 
-        :param number_of_nodes:
-        :param bias:
-        :param activation_function:
-        :param weights:
+        :param number_of_nodes: number of nodes within layer
+        :param bias: bias value
+        :param activation_function: type of activation function
+        :param weights: array with weights
         """
         self.number_of_nodes = number_of_nodes
         self.bias = bias
@@ -83,8 +82,8 @@ class NeuralNetwork:
     3. Output layer with 1 node (as output of a gate is singular value). Node will have two inputs (plus bias as third).
     """
 
-    LEARNING_RATE = 0.05
-    MAX_EPOCHS = 100_000
+    LEARNING_RATE = 0.3
+    MAX_EPOCHS = 10_000
     TARGETED_ERROR_RATE = 0.001
 
     def __init__(self) -> None:
@@ -177,8 +176,10 @@ class NeuralNetwork:
 
         :return: dictionary with model
         """
-        assert isinstance(self.hidden_layer, Layer)
-        assert isinstance(self.output_layer, Layer)
+        if not self._was_initialized:
+            raise InitialisationError
+        self.hidden_layer = cast(Layer, self.hidden_layer)
+        self.output_layer = cast(Layer, self.output_layer)
         assert self.input_data_size
         model: Dict = {'input': {}, 'hidden_1': {}, 'output': {}}
 
@@ -236,7 +237,6 @@ class NeuralNetwork:
 
         hidden_layer_weights = scale * (np.random.random((input_data_size, hidden_layer_number_of_nodes)) - 0.5)
         output_layer_weights = scale * (np.random.random((hidden_layer_number_of_nodes, output_data_size)) - 0.5)
-
         self.hidden_layer = Layer(hidden_layer_number_of_nodes, hidden_layer_bias,
                                   hidden_layer_weights, hidden_layer_act_func)
         self.output_layer = Layer(output_data_size, output_layer_bias, output_layer_weights,
@@ -249,10 +249,12 @@ class NeuralNetwork:
 
         :param inputs: vector of input data
         """
-        if isinstance(inputs, List):
+        if not self._was_initialized:
+            raise InitialisationError
+        if isinstance(inputs, list):
             inputs = np.array(inputs)
-        assert isinstance(self.hidden_layer, Layer)
-        assert isinstance(self.output_layer, Layer)
+        self.hidden_layer = cast(Layer, self.hidden_layer)
+        self.output_layer = cast(Layer, self.output_layer)
 
         self.hidden_layer.node_values = inputs.T.dot(self.hidden_layer.weights) + self.hidden_layer.bias
 
@@ -319,28 +321,33 @@ class NeuralNetwork:
         """
         assert isinstance(self.hidden_layer, Layer)
         assert isinstance(self.output_layer, Layer)
-        assert self.hidden_layer.output
+        assert self.hidden_layer.output is not None
         output_layer_errors = self.output_layer.output - targets.T
         output_layer_delta = output_layer_errors * self.output_layer.activation_function.prime(self.output_layer.output)
 
         hidden_layer_error = output_layer_delta.dot(self.output_layer.weights.T)
         hidden_layer_delta = hidden_layer_error * self.hidden_layer.activation_function.prime(self.hidden_layer.output)
         hidden_layer_updates = self.LEARNING_RATE * inputs.dot(hidden_layer_delta)
-        self.hidden_layer.weights -= hidden_layer_updates * random.randint(1, 3)
+        self.hidden_layer.weights -= hidden_layer_updates
 
         output_layer_weights_updates = self.LEARNING_RATE * self.hidden_layer.output.T.dot(output_layer_delta)
-        self.output_layer.weights -= output_layer_weights_updates * random.randint(1, 3)
+        self.output_layer.weights -= output_layer_weights_updates
 
-    def train(self, dataset: TrainingData) -> None:
+    def train(self, dataset: TrainingDataSet, display_err: bool = True) -> None:
         """Perform training of network for given inputs and targets
 
         :param dataset: TrainingData object with inputs and targets
+        :param display_err: boolean value
         """
         if not self._was_initialized:
             raise InitialisationError('Network was not initialised!')
         _count = 0
         self.forward(dataset.inputs)
-        while self.cumulative_error_rate(dataset.targets) > self.TARGETED_ERROR_RATE and _count < self.MAX_EPOCHS:
+        err_rate = self.cumulative_error_rate(dataset.targets) / len(dataset.inputs[0])
+        while err_rate > self.TARGETED_ERROR_RATE and _count < self.MAX_EPOCHS:
             self.forward(dataset.inputs)
             self._backwards(dataset.inputs, dataset.targets)
             _count += 1
+            err_rate = self.cumulative_error_rate(dataset.targets) / len(dataset.inputs[0])
+            if display_err:
+                print('{}   {}'.format(_count, err_rate))

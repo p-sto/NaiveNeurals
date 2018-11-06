@@ -57,6 +57,30 @@ class Sigmoid(Function):
         return cls.function(arg) * (1 - cls.function(arg))
 
 
+class Tanh(Function):
+    """Represents hyperbolic tangent"""
+
+    label = 'tanh'
+
+    @staticmethod
+    def function(arg: np.array) -> np.array:
+        """Calculate tanh(arg)
+
+        :param arg: float input value
+        :return: float tanh(arg) value
+        """
+        return np.tanh(arg)
+
+    @classmethod
+    def prime(cls, arg: np.array) -> np.array:
+        """Calculate value of tanh's prime derivative for given arg
+
+        :param arg: float input value
+        :return: float value
+        """
+        return 1 - np.tanh(arg)**2
+
+
 def get_activation_function(label: str) -> Function:
     """Get activation function by label
 

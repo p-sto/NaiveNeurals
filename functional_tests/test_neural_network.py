@@ -3,8 +3,8 @@ import logging
 
 import pytest
 
-from NaiveNeurals.MLP.classes import NeuralNetwork
-from NaiveNeurals.data.trained_models import XOR_MODEL_1
+from NaiveNeurals.MLP.network import NeuralNetwork
+from NaiveNeurals.models.trained_models import XOR_MODEL_1
 
 logger = logging.getLogger('classes')
 logger.setLevel(logging.DEBUG)

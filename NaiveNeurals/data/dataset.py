@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 
 
-class TrainingData:
+class TrainingDataSet:
     """Represents training set"""
 
     def __init__(self, training_inputs: List[List[float]], targets: List[List[float]]) -> None:
@@ -12,7 +12,6 @@ class TrainingData:
         :param training_inputs: List of inputs
         :param targets: targeted outputs for provided inputs
         """
-        assert len(training_inputs) == len(targets)
         self._training_inputs = training_inputs
         self._targets = targets
 

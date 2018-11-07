@@ -77,6 +77,8 @@ Usage
 
     data_set = TrainingDataSet(inputs, targets)
     nn.train(data_set, display_err=True)
+    
+    nn.forward([[1], [0]])
 
 References
 ----------

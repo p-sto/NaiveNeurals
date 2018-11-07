@@ -64,10 +64,13 @@ Usage
     from NaiveNeurals.MLP.network import NeuralNetwork
     from NaiveNeurals.data.dataset import TrainingDataSet
 
-    nn = NeuralNetwork()
     input_data_size = 2
     output_data_size = 1
     hidden_layer_number_of_nodes = 5
+    
+    nn = NeuralNetwork()
+    nn.setup_network(input_data_size=input_data_size, output_data_size=output_data_size,
+                     hidden_layer_number_of_nodes=hidden_layer_number_of_nodes)
 
     inputs =  [[0, 0, 1, 1], [1, 0, 1, 0]]
     targets = [[1, 0, 0, 1]]

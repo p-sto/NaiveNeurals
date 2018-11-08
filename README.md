@@ -9,6 +9,7 @@ Goals
 - [X] Implement 3 layer MLP network with GD back-propagation algorithm
 - [ ] Test coverage at least 80%
 - [X] Allow model export/import to json
+- [ ] Add support for installing with Anaconda
 - [ ] Prepare network learning examples and analysis:
     - [ ] Classification problem
     - [ ] Regression problem

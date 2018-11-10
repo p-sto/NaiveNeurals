@@ -9,8 +9,6 @@ from NaiveNeurals.utils import DataSeries
 def data_generator_for_regression(data_series: DataSeries, data_size: Optional[int] = 40) -> Tuple[np.array, np.array]:
     """Generate series for regression testing
 
-    Source: Machine Learning - An Algorithmic Perspective
-
     :param data_series: type of data series
     :param data_size: generated data size
     :return: generated data

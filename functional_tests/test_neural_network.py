@@ -11,7 +11,7 @@ logger.setLevel(logging.DEBUG)
 
 
 def test_basic_pass_network():
-    """ This test one forward pass and one back-propagation for example given here:
+    """ This test one forward pass and one backpropagation for example given here:
 
     https://mattmazur.com/2015/03/17/a-step-by-step-backpropagation-example/
 

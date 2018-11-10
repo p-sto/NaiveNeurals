@@ -7,7 +7,7 @@ import numpy as np
 
 from NaiveNeurals.MLP.functions import Sigmoid, Function, calculate_error, get_activation_function
 from NaiveNeurals.data.dataset import TrainingDataSet
-from NaiveNeurals.utils import ErrorAlgorithm, InitialisationError
+from NaiveNeurals.utils import ErrorAlgorithm, InitialisationError, ConvergenceError
 
 logging.basicConfig()
 logger = logging.getLogger('network')
@@ -96,6 +96,7 @@ class NeuralNetwork:
         self.output_layer: Optional[Layer] = None
         self.input_data_size: Optional[int] = None
         self._convergence_profile: List[float] = []
+        self.error_function = ErrorAlgorithm.SQR
 
     @property
     def output(self) -> np.array:
@@ -121,7 +122,7 @@ class NeuralNetwork:
         :param targets: array with target values
         :return: vector of floats
         """
-        return calculate_error(self.output, targets.T, func_type=ErrorAlgorithm.SQR)
+        return calculate_error(self.output, targets.T, func_type=self.error_function)
 
     def cumulative_error_rate(self, targets: np.array) -> float:
         """Return cumulative error rate for all training data.
@@ -223,7 +224,8 @@ class NeuralNetwork:
     def setup_network(self, input_data_size: int, output_data_size: int, hidden_layer_number_of_nodes: int,
                       hidden_layer_bias: float = 0.0, output_layer_bias: float = 0.0,
                       hidden_layer_act_func: Function = Sigmoid(), output_layer_act_func: Function = Sigmoid(),
-                      weights_range: Union[int, float] = 1) -> None:
+                      weights_range: Union[int, float] = 1,
+                      error_function: ErrorAlgorithm = ErrorAlgorithm.SQR) -> None:
         """Setup neural network
 
         :param input_data_size: input data size aka how many inputs are in input layer
@@ -234,16 +236,22 @@ class NeuralNetwork:
         :param hidden_layer_act_func: hidden layer activation function
         :param output_layer_act_func: output layer activation function
         :param weights_range: denotes range of weights
+        :param error_function: set proper error function
         """
         if self._was_initialized:
             return
 
+        self.error_function = error_function
         self.input_data_size = input_data_size
 
+        # init weights in the range between -1/sqrt(N) and 1/sqrt(N) where N is number of nodes in layer preceding
+        # layer for which weights are initialised
         hidden_layer_weights = weights_range * (np.random.random((input_data_size,
                                                                   hidden_layer_number_of_nodes)) - 0.5)
+        hidden_layer_weights = hidden_layer_weights / np.sqrt(input_data_size)
         output_layer_weights = weights_range * (np.random.random((hidden_layer_number_of_nodes,
                                                                   output_data_size)) - 0.5)
+        output_layer_weights = output_layer_weights / np.sqrt(hidden_layer_number_of_nodes)
         self.hidden_layer = Layer(hidden_layer_number_of_nodes, hidden_layer_bias,
                                   hidden_layer_weights, hidden_layer_act_func)
         self.output_layer = Layer(output_data_size, output_layer_bias, output_layer_weights,
@@ -359,5 +367,5 @@ class NeuralNetwork:
             if _count % 100 == 0:
                 logger.info('[%s] iter, cumulative error rate is %s', _count, err_rate)
         if err_rate > self.TARGETED_ERROR_RATE:
-            logger.error('Could not converge, error rate = %s', err_rate)
+            raise ConvergenceError('Could not converge, error rate = {}'.format(err_rate))
         logger.info('Convergence achieved in %s iterations. Cumulative error rate is %s', _count, err_rate)

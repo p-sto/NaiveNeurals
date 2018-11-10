@@ -81,14 +81,44 @@ class Tanh(Function):
         return 1 - np.tanh(arg)**2
 
 
+class Linear(Function):
+    """Represents linear function"""
+
+    label = 'lin'
+
+    @staticmethod
+    def function(arg: np.array) -> np.array:
+        """Calculate lin(arg)
+
+        :param arg: float input value
+        :return: float lin(arg) value
+        """
+        return arg
+
+    @classmethod
+    def prime(cls, arg: np.array) -> np.array:
+        """Calculate value of lin's prime derivative for given arg
+
+        :param arg: float input value
+        :return: float value
+        """
+        ones = np.array(arg)
+        ones[::] = 1.0
+        return ones
+
+
 def get_activation_function(label: str) -> Function:
     """Get activation function by label
 
     :param label: string denoting function
     :return: callable function
     """
+    if label == 'lin':
+        return Linear()
     if label == 'sigmoid':
         return Sigmoid()
+    if label == 'tanh':
+        return Tanh()
     return Sigmoid()
 
 
@@ -103,4 +133,6 @@ def calculate_error(target: np.array, actual: np.array,
     """
     if func_type == ErrorAlgorithm.SQR:
         return np.sum(0.5 * np.power(actual - target, 2), axis=1)
+    elif func_type == ErrorAlgorithm.CE:
+        return -1 * np.sum(target * np.log(abs(actual)), axis=1)
     raise NotImplementedError()

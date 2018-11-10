@@ -74,6 +74,7 @@ data_set = TrainingDataSet(inputs, targets)
 nn.train(data_set)
 ```
 
+
 References
 ----------
 

@@ -1,4 +1,4 @@
-"""This file contains example script of training neural network for classification problem"""
+"""This file contains example script of training neural network for classification problem."""
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -26,6 +26,7 @@ def learn_xor() -> None:
                      hidden_layer_act_func=hidden_layer_act_func, output_layer_act_func=output_layer_act_func,
                      weights_range=weights_range)
 
+    # every list in inputs represents one input and data pushed into network
     inputs = [[0, 0, 1, 1], [1, 0, 1, 0]]
     targets = [[1, 0, 0, 1]]
 

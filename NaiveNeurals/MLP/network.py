@@ -9,7 +9,8 @@ from NaiveNeurals.MLP.functions import Sigmoid, Function, calculate_error, get_a
 from NaiveNeurals.data.dataset import TrainingDataSet
 from NaiveNeurals.utils import ErrorAlgorithm, InitialisationError
 
-logger = logging.getLogger('classes')
+logging.basicConfig()
+logger = logging.getLogger('network')
 logger.setLevel(logging.INFO)
 np.random.seed(1)
 
@@ -94,6 +95,7 @@ class NeuralNetwork:
         self.hidden_layer: Optional[Layer] = None
         self.output_layer: Optional[Layer] = None
         self.input_data_size: Optional[int] = None
+        self._convergence_profile: List[float] = []
 
     @property
     def output(self) -> np.array:
@@ -104,6 +106,14 @@ class NeuralNetwork:
         if not self.output_layer:
             raise InitialisationError
         return self.output_layer.output
+
+    @property
+    def convergence_profile(self) -> List[float]:
+        """Get convergence profile
+
+        :return: list of floats
+        """
+        return self._convergence_profile
 
     def errors(self, targets: np.array) -> np.array:
         """Return vector of errors for particular learning data.
@@ -213,7 +223,7 @@ class NeuralNetwork:
     def setup_network(self, input_data_size: int, output_data_size: int, hidden_layer_number_of_nodes: int,
                       hidden_layer_bias: float = 0.0, output_layer_bias: float = 0.0,
                       hidden_layer_act_func: Function = Sigmoid(), output_layer_act_func: Function = Sigmoid(),
-                      weights_range: Optional[int] = None) -> None:
+                      weights_range: Union[int, float] = 1) -> None:
         """Setup neural network
 
         :param input_data_size: input data size aka how many inputs are in input layer
@@ -228,15 +238,12 @@ class NeuralNetwork:
         if self._was_initialized:
             return
 
-        if not weights_range:
-            scale = 1
-        else:
-            scale = weights_range
-
         self.input_data_size = input_data_size
 
-        hidden_layer_weights = scale * (np.random.random((input_data_size, hidden_layer_number_of_nodes)) - 0.5)
-        output_layer_weights = scale * (np.random.random((hidden_layer_number_of_nodes, output_data_size)) - 0.5)
+        hidden_layer_weights = weights_range * (np.random.random((input_data_size,
+                                                                  hidden_layer_number_of_nodes)) - 0.5)
+        output_layer_weights = weights_range * (np.random.random((hidden_layer_number_of_nodes,
+                                                                  output_data_size)) - 0.5)
         self.hidden_layer = Layer(hidden_layer_number_of_nodes, hidden_layer_bias,
                                   hidden_layer_weights, hidden_layer_act_func)
         self.output_layer = Layer(output_data_size, output_layer_bias, output_layer_weights,
@@ -333,11 +340,10 @@ class NeuralNetwork:
         output_layer_weights_updates = self.LEARNING_RATE * self.hidden_layer.output.T.dot(output_layer_delta)
         self.output_layer.weights -= output_layer_weights_updates
 
-    def train(self, dataset: TrainingDataSet, display_err: bool = True) -> None:
+    def train(self, dataset: TrainingDataSet) -> None:
         """Perform training of network for given inputs and targets
 
         :param dataset: TrainingData object with inputs and targets
-        :param display_err: boolean value
         """
         if not self._was_initialized:
             raise InitialisationError('Network was not initialised!')
@@ -349,5 +355,9 @@ class NeuralNetwork:
             self._backwards(dataset.inputs, dataset.targets)
             _count += 1
             err_rate = self.cumulative_error_rate(dataset.targets) / len(dataset.inputs[0])
-            if display_err:
-                print('{}   {}'.format(_count, err_rate))
+            self._convergence_profile.append(err_rate)
+            if _count % 100 == 0:
+                logger.info('[%s] iter, cumulative error rate is %s', _count, err_rate)
+        if err_rate > self.TARGETED_ERROR_RATE:
+            logger.error('Could not converge, error rate = %s', err_rate)
+        logger.info('Convergence achieved in %s iterations. Cumulative error rate is %s', _count, err_rate)

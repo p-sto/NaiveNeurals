@@ -35,6 +35,8 @@ cd NaiveNeurals
 Prepare environment (using virtualenv)
 --------------------------------------
 
+Requires Python 3.6
+
 ```bash
 source set_env.sh     # sets PYTHONPATH
 make venv
@@ -44,12 +46,6 @@ make test
 
 If you are using Ubuntu based system you must install tkinter
 
-For Python < 3.6
-```bash
-sudo apt-get install python3-tk
-```
-
-For Python 3.6
 ```bash
 $ sudo apt-get install python3.6-tk
 ```

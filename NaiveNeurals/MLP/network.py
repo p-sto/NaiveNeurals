@@ -1,12 +1,13 @@
 """Implementation of perceptron neural network from scratch for educational purpose."""
 import logging
+import random
 from numbers import Real
 
 from typing import Optional, Dict, Any, Union, List, cast
 import numpy as np
 
 from NaiveNeurals.MLP.functions import Sigmoid, Function, calculate_error, get_activation_function
-from NaiveNeurals.data.dataset import TrainingDataSet
+from NaiveNeurals.data.dataset import DataSet
 from NaiveNeurals.utils import ErrorAlgorithm, InitialisationError, ConvergenceError
 
 logging.basicConfig()
@@ -96,6 +97,7 @@ class NeuralNetwork:
         self.output_layer: Optional[Layer] = None
         self.input_data_size: Optional[int] = None
         self._convergence_profile: List[float] = []
+        self._validation_profile: List[float] = []
         self.error_function = ErrorAlgorithm.SQR
 
     @property
@@ -115,6 +117,14 @@ class NeuralNetwork:
         :return: list of floats
         """
         return self._convergence_profile
+
+    @property
+    def validation_profile(self) -> List[float]:
+        """Get validation convergence profile
+
+        :return: list of floats
+        """
+        return self._validation_profile
 
     def errors(self, targets: np.array) -> np.array:
         """Return vector of errors for particular learning data.
@@ -348,7 +358,7 @@ class NeuralNetwork:
         output_layer_weights_updates = self.LEARNING_RATE * self.hidden_layer.output.T.dot(output_layer_delta)
         self.output_layer.weights -= output_layer_weights_updates
 
-    def train(self, dataset: TrainingDataSet) -> None:
+    def train(self, dataset: DataSet) -> None:
         """Perform training of network for given inputs and targets
 
         :param dataset: TrainingData object with inputs and targets
@@ -369,3 +379,45 @@ class NeuralNetwork:
         if err_rate > self.TARGETED_ERROR_RATE:
             raise ConvergenceError('Could not converge, error rate = {}'.format(err_rate))
         logger.info('Convergence achieved in %s iterations. Cumulative error rate is %s', _count, err_rate)
+
+    def train_with_validation(self, training_datasets: List[DataSet], validation_dataset: DataSet) -> None:
+        """Perform training of network on a data set(s) with instant validation.
+
+        Key idea behind this learning method is to randomly select training dataset from provided list and
+        validate results with another data set. Training is finished when error from VALIDATION data set is smaller
+        than TARGETED_ERROR_RATE value.
+
+        :param training_datasets: List of DataSet objects
+        :param validation_dataset: DataSet object used for validation
+        """
+        if not self._was_initialized:
+            raise InitialisationError('Network was not initialised!')
+        _count = 0
+        _epoch_per_dataset = 10
+        dataset: DataSet = random.choice(training_datasets)
+        self.forward(dataset.inputs)
+        training_err_rate = self.cumulative_error_rate(dataset.targets) / len(dataset.inputs[0])
+        self.forward(validation_dataset.inputs)
+        val_err_rate = self.cumulative_error_rate(validation_dataset.targets) / len(validation_dataset.inputs[0])
+        while training_err_rate > self.TARGETED_ERROR_RATE and _count < self.MAX_EPOCHS:
+            self.forward(dataset.inputs)
+            self._backwards(dataset.inputs, dataset.targets)
+            _count += 1
+            training_err_rate = self.cumulative_error_rate(dataset.targets) / len(dataset.inputs[0])
+            self._convergence_profile.append(training_err_rate)
+
+            # push data from validation data set through network
+            self.forward(validation_dataset.inputs)
+            val_err_rate = self.cumulative_error_rate(validation_dataset.targets) / len(validation_dataset.inputs[0])
+            self._validation_profile.append(val_err_rate)
+            if _count % 100 == 0:
+                logger.info('[%s] iter, training error rate is %s, validation error rate is %s',
+                            _count, training_err_rate, val_err_rate)
+            if _count % _epoch_per_dataset == 0:
+                # let's randomly choose another dataset
+                dataset = random.choice(training_datasets)
+
+        if val_err_rate > self.TARGETED_ERROR_RATE:
+            raise ConvergenceError('Could not converge, error rate = {}'.format(val_err_rate))
+        logger.info('Convergence achieved in %s iterations. Training error rate is %s,'
+                    ' validation error rate is %s', _count, training_err_rate, val_err_rate)

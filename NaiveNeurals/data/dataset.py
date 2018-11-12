@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 
 
-class TrainingDataSet:
+class DataSet:
     """Represents training set"""
 
     def __init__(self, training_inputs: List[List[float]], targets: List[List[float]]) -> None:

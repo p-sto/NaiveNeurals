@@ -4,7 +4,7 @@ import numpy as np
 
 from NaiveNeurals.MLP.functions import Tanh
 from NaiveNeurals.MLP.network import NeuralNetwork
-from NaiveNeurals.data.dataset import TrainingDataSet
+from NaiveNeurals.data.dataset import DataSet
 
 
 def learn_xor() -> None:
@@ -30,7 +30,7 @@ def learn_xor() -> None:
     inputs = [[0, 0, 1, 1], [1, 0, 1, 0]]
     targets = [[1, 0, 0, 1]]
 
-    data_set = TrainingDataSet(inputs, targets)
+    data_set = DataSet(inputs, targets)
     nn.train(data_set)
 
     siz = 101

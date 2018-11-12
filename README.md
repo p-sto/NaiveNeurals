@@ -7,9 +7,9 @@ Naive implementation of perceptron neural network. Under heavy development.
 - [X] Implement 3 layer MLP network with SGD back-propagation algorithm
 - [ ] Test coverage at least 80%
 - [X] Allow model export/import to json
-- [ ] Prepare network learning examples and analysis:
+- [X] Prepare network learning examples and analysis for:
     - [X] Classification problem
-    - [ ] Regression problem
+    - [X] Regression problem
 - [ ] Use MLP network for MNIST dataset
 - [ ] Implement various activation function
     - [x] Tanh
@@ -55,7 +55,7 @@ Usage
 
 ```python
 from NaiveNeurals.MLP.network import NeuralNetwork
-from NaiveNeurals.data.dataset import TrainingDataSet
+from NaiveNeurals.data.dataset import DataSet
 
 nn = NeuralNetwork()
 input_data_size = 2
@@ -66,21 +66,22 @@ hidden_layer_number_of_nodes = 5
 inputs =  [[0, 0, 1, 1], [1, 0, 1, 0]]
 targets = [[1, 0, 0, 1]]
 
-data_set = TrainingDataSet(inputs, targets)
+data_set = DataSet(inputs, targets)
 nn.train(data_set)
 ```
 
+To examples of networks for ``regression`` and ``classification`` can be found in ``scripts`` directory. 
 
 References
 ----------
 
-Machine Learning - An Algorithmic Perspective (2nd edition)
+[Machine Learning - An Algorithmic Perspective (2nd edition)](https://www.amazon.com/Machine-Learning-Algorithmic-Perspective-Recognition/dp/1466583282/ref=dp_ob_title_bk)
 
-https://mattmazur.com/2015/03/17/a-step-by-step-backpropagation-example/
+[Mat's Mazur Blog](https://mattmazur.com/2015/03/17/a-step-by-step-backpropagation-example/)
 
-https://iamtrask.github.io/2015/07/12/basic-python-network/
+[Python neural network pt.1](https://iamtrask.github.io/2015/07/12/basic-python-network/)
 
-https://iamtrask.github.io/2015/07/27/python-network-part2/
+[Python neural network pt.1](https://iamtrask.github.io/2015/07/27/python-network-part2/)
 
-https://towardsdatascience.com/activation-functions-neural-networks-1cbd9f8d91d6
+[Activation function in neural networks](https://towardsdatascience.com/activation-functions-neural-networks-1cbd9f8d91d6)
 

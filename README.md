@@ -77,9 +77,11 @@ In ``scripts/regression_problem.py`` you may find example of training network wi
 Achieved results:
 
 Approximation:
+
 ![Aproximation_sine](docs/graphs/sine_example.png)
 
 Convergence:
+
 ![Convergence_sine](docs/graphs/sine_conv.png)
 
 Example of classification training can be found in ``scripts/classification_problem.py``

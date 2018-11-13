@@ -13,10 +13,10 @@ def learn_xor() -> None:
     nn = NeuralNetwork()
     input_data_size = 2
     output_data_size = 1
-    hidden_layer_number_of_nodes = 10
-    hidden_layer_bias = -.3
-    output_layer_bias = 0.9
-    weights_range = 0.8
+    hidden_layer_number_of_nodes = 8
+    hidden_layer_bias = -0.6
+    output_layer_bias = 0.05
+    weights_range = 1
     hidden_layer_act_func = Tanh()
     output_layer_act_func = Tanh()
 
@@ -25,6 +25,7 @@ def learn_xor() -> None:
                      hidden_layer_bias=hidden_layer_bias, output_layer_bias=output_layer_bias,
                      hidden_layer_act_func=hidden_layer_act_func, output_layer_act_func=output_layer_act_func,
                      weights_range=weights_range)
+    nn.LEARNING_RATE = 0.015
 
     # every list in inputs represents one input and data pushed into network
     inputs = [[0, 0, 1, 1], [1, 0, 1, 0]]
@@ -55,6 +56,7 @@ def learn_xor() -> None:
     ax2.scatter(x_input, y_input[::-1], c=res_unified, cmap='PiYG')
 
     ax3 = f3.add_subplot(111)
+    plt.yscale('log')
     ax3.plot(nn.convergence_profile)
 
     plt.show()

@@ -219,7 +219,7 @@ class NeuralNetwork:
 
         output_weights = {}
         for ind in range(self.output_layer.weights.T.shape[0]):
-            output_weights['node_{}'.format(ind)] = {'bias': self.output_layer.weights}
+            output_weights['node_{}'.format(ind)] = {'bias': self.output_layer.bias}
         for col_ind, column in enumerate(self.output_layer.weights.T):
             for row_ind, val in enumerate(column):
                 output_weights['node_{}'.format(col_ind)]['weight_{}'.format(row_ind)] = val

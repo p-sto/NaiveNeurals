@@ -5,7 +5,8 @@ from enum import Enum
 class DataSeries(Enum):
     """Enum storing definitions of possible data series being generated"""
     SINE = 'sine'
-    GAUSS_SINE = 'gauss_sine'
+    SINE_GAUSS = 'sine_gauss'
+    SINE_MULTIPLE = 'sine_multiple'
 
 
 class ErrorAlgorithm(Enum):

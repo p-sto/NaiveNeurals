@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from NaiveNeurals.MLP.functions import get_activation_function, Sigmoid, calculate_error
+from NaiveNeurals.MLP.activation_functions import get_activation_function, Sigmoid, calculate_error
 
 
 def test_get_activation_function():

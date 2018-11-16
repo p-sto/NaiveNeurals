@@ -12,12 +12,12 @@ Naive implementation of perceptron neural network. Under heavy development.
     - [X] Regression problem
 - [ ] Use MLP network for MNIST dataset
 - [ ] Implement various activation function
-    - [x] Tanh
+    - [X] Tanh
     - [ ] Softmax
     - [ ] ReLU
     - [ ] Gaussian
 - [ ] Explore back-propagation algorithms:
-    - [ ] SGD with momentum
+    - [X] SGD with momentum
     - [ ] ADAM
     - [ ] Levenberg-Marquardt
 
@@ -100,3 +100,4 @@ References
 
 [Activation function in neural networks](https://towardsdatascience.com/activation-functions-neural-networks-1cbd9f8d91d6)
 
+[Gradient Descent with Momentum](http://www.cs.bham.ac.uk/~jxb/NN/l8.pdf)

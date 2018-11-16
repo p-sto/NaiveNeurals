@@ -2,8 +2,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from NaiveNeurals.MLP.functions import Tanh
-from NaiveNeurals.MLP.network import NeuralNetwork
+from NaiveNeurals.MLP.activation_functions import Tanh
+from NaiveNeurals.MLP.network import NeuralNetwork, LearningConfiguration
 from NaiveNeurals.data.dataset import DataSet
 
 
@@ -25,7 +25,8 @@ def learn_xor() -> None:
                      hidden_layer_bias=hidden_layer_bias, output_layer_bias=output_layer_bias,
                      hidden_layer_act_func=hidden_layer_act_func, output_layer_act_func=output_layer_act_func,
                      weights_range=weights_range)
-    nn.LEARNING_RATE = 0.015
+
+    nn.set_learning_params(LearningConfiguration(learning_rate=0.015, solver='GD_MOM'))
 
     # every list in inputs represents one input and data pushed into network
     inputs = [[0, 0, 1, 1], [1, 0, 1, 0]]

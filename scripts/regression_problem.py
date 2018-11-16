@@ -4,8 +4,8 @@ import itertools
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
-from NaiveNeurals.MLP.functions import Linear, Tanh
-from NaiveNeurals.MLP.network import NeuralNetwork
+from NaiveNeurals.MLP.activation_functions import Linear, Tanh
+from NaiveNeurals.MLP.network import NeuralNetwork, LearningConfiguration
 from NaiveNeurals.data.data_generators import data_generator_for_regression
 from NaiveNeurals.data.dataset import DataSet
 from NaiveNeurals.utils import DataSeries, ConvergenceError
@@ -27,17 +27,19 @@ def sine_regression() -> None:
     hidden_layer_bias = 1
     output_layer_bias = -0.7
     weights_range = 1
-    nn.LEARNING_RATE = 0.01
-    nn.TARGETED_ERROR_RATE = 0.003
-    nn.MAX_EPOCHS = 30_000
     hidden_layer_act_func = Tanh()
     output_layer_act_func = Linear()
+
+    learning_configuration = LearningConfiguration(learning_rate=0.01, target_error=0.003,
+                                                   solver='GD_MOM', max_epochs=20_000)
 
     nn.setup_network(input_data_size=input_data_size, output_data_size=output_data_size,
                      hidden_layer_number_of_nodes=hidden_layer_number_of_nodes,
                      hidden_layer_bias=hidden_layer_bias, output_layer_bias=output_layer_bias,
                      hidden_layer_act_func=hidden_layer_act_func, output_layer_act_func=output_layer_act_func,
                      weights_range=weights_range)
+
+    nn.set_learning_params(learning_configuration)
 
     train_data_set1 = DataSet([x_values1], [y_values1 / normalization_outputs])
     train_data_set2 = DataSet([x_values2], [y_values2 / normalization_outputs])

@@ -6,7 +6,8 @@ from numbers import Real
 from typing import Optional, Dict, Any, Union, List, cast
 import numpy as np
 
-from NaiveNeurals.MLP.functions import Sigmoid, Function, calculate_error, get_activation_function
+from NaiveNeurals.MLP.activation_functions import Sigmoid, Function, calculate_error, get_activation_function
+from NaiveNeurals.MLP.solvers import Solver, calculate_weights
 from NaiveNeurals.data.dataset import DataSet
 from NaiveNeurals.utils import ErrorAlgorithm, InitialisationError, ConvergenceError
 
@@ -14,6 +15,34 @@ logging.basicConfig()
 logger = logging.getLogger('network')
 logger.setLevel(logging.INFO)
 np.random.seed(1)
+
+
+class LearningConfiguration:
+    """Configuration class for Neural Network"""
+
+    # pylint: disable=too-many-arguments
+    def __init__(self,
+                 error_function: ErrorAlgorithm = ErrorAlgorithm.SQR,
+                 solver: str = 'GD',
+                 learning_rate: float = 0.3,
+                 max_epochs: int = 10_000,
+                 target_error: float = 0.001,
+                 solver_setup: Optional[Dict] = None) -> None:
+        """Initialise object
+
+        :param error_function: error algorithm
+        :param solver: solver used for weights update
+        :param learning_rate: learning rate parameter
+        :param max_epochs: max epoch for learning process
+        :param target_error: targeted error rate
+        :param solver_setup: solver setup data
+        """
+        self.error_function = error_function
+        self.solver = next(iter(elmn for elmn in Solver if elmn.name.upper() == solver.upper()))
+        self.learning_rate = learning_rate
+        self.max_epochs = max_epochs
+        self.target_error = target_error
+        self.solver_setup = solver_setup if solver_setup else {}
 
 
 class Layer:
@@ -84,10 +113,6 @@ class NeuralNetwork:
     3. Output layer with 1 node (as output of a gate is singular value). Node will have two inputs (plus bias as third).
     """
 
-    LEARNING_RATE = 0.3
-    MAX_EPOCHS = 10_000
-    TARGETED_ERROR_RATE = 0.001
-
     def __init__(self) -> None:
         """Initialise neural network"""
         self._was_initialized = False
@@ -98,7 +123,14 @@ class NeuralNetwork:
         self.input_data_size: Optional[int] = None
         self._convergence_profile: List[float] = []
         self._validation_profile: List[float] = []
-        self.error_function = ErrorAlgorithm.SQR
+        self.learning_params = LearningConfiguration()
+
+    def set_learning_params(self, configuration: LearningConfiguration) -> None:
+        """Use custom configuration setup for learning parameters
+
+        :param configuration: NetworkConfiguration object
+        """
+        self.learning_params = configuration
 
     @property
     def output(self) -> np.array:
@@ -132,7 +164,7 @@ class NeuralNetwork:
         :param targets: array with target values
         :return: vector of floats
         """
-        return calculate_error(self.output, targets.T, func_type=self.error_function)
+        return calculate_error(self.output, targets.T, func_type=self.learning_params.error_function)
 
     def cumulative_error_rate(self, targets: np.array) -> float:
         """Return cumulative error rate for all training data.
@@ -251,7 +283,7 @@ class NeuralNetwork:
         if self._was_initialized:
             return
 
-        self.error_function = error_function
+        self.learning_params.error_function = error_function
         self.input_data_size = input_data_size
 
         # init weights in the range between -1/sqrt(N) and 1/sqrt(N) where N is number of nodes in layer preceding
@@ -352,11 +384,13 @@ class NeuralNetwork:
 
         hidden_layer_error = output_layer_delta.dot(self.output_layer.weights.T)
         hidden_layer_delta = hidden_layer_error * self.hidden_layer.activation_function.prime(self.hidden_layer.output)
-        hidden_layer_updates = self.LEARNING_RATE * inputs.dot(hidden_layer_delta)
-        self.hidden_layer.weights -= hidden_layer_updates
+        self.hidden_layer.weights -= calculate_weights(self.learning_params.learning_rate,
+                                                       inputs.dot(hidden_layer_delta),
+                                                       self.learning_params, 'hidden_layer')
 
-        output_layer_weights_updates = self.LEARNING_RATE * self.hidden_layer.output.T.dot(output_layer_delta)
-        self.output_layer.weights -= output_layer_weights_updates
+        self.output_layer.weights -= calculate_weights(self.learning_params.learning_rate,
+                                                       self.hidden_layer.output.T.dot(output_layer_delta),
+                                                       self.learning_params, 'output_layer')
 
     def train(self, dataset: DataSet) -> None:
         """Perform training of network for given inputs and targets
@@ -368,7 +402,8 @@ class NeuralNetwork:
         _count = 0
         self.forward(dataset.inputs)
         err_rate = self.cumulative_error_rate(dataset.targets) / len(dataset.inputs[0])
-        while err_rate > self.TARGETED_ERROR_RATE and _count < self.MAX_EPOCHS:
+
+        while err_rate > self.learning_params.target_error and _count < self.learning_params.max_epochs:
             self.forward(dataset.inputs)
             self._backwards(dataset.inputs, dataset.targets)
             _count += 1
@@ -376,7 +411,7 @@ class NeuralNetwork:
             self._convergence_profile.append(err_rate)
             if _count % 100 == 0:
                 logger.info('[%s] iter, cumulative error rate is %s', _count, err_rate)
-        if err_rate > self.TARGETED_ERROR_RATE:
+        if err_rate > self.learning_params.target_error:
             raise ConvergenceError('Could not converge, error rate = {}'.format(err_rate))
         logger.info('Convergence achieved in %s iterations. Cumulative error rate is %s', _count, err_rate)
 
@@ -394,12 +429,14 @@ class NeuralNetwork:
             raise InitialisationError('Network was not initialised!')
         _count = 0
         _epoch_per_dataset = 10
+
         dataset: DataSet = random.choice(training_datasets)
         self.forward(dataset.inputs)
         training_err_rate = self.cumulative_error_rate(dataset.targets) / len(dataset.inputs[0])
         self.forward(validation_dataset.inputs)
         val_err_rate = self.cumulative_error_rate(validation_dataset.targets) / len(validation_dataset.inputs[0])
-        while training_err_rate > self.TARGETED_ERROR_RATE and _count < self.MAX_EPOCHS:
+
+        while training_err_rate > self.learning_params.target_error and _count < self.learning_params.max_epochs:
             self.forward(dataset.inputs)
             self._backwards(dataset.inputs, dataset.targets)
             _count += 1
@@ -417,7 +454,7 @@ class NeuralNetwork:
                 # let's randomly choose another dataset
                 dataset = random.choice(training_datasets)
 
-        if val_err_rate > self.TARGETED_ERROR_RATE:
+        if val_err_rate > self.learning_params.target_error:
             raise ConvergenceError('Could not converge, error rate = {}'.format(val_err_rate))
         logger.info('Convergence achieved in %s iterations. Training error rate is %s,'
                     ' validation error rate is %s', _count, training_err_rate, val_err_rate)

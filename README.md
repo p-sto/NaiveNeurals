@@ -13,14 +13,16 @@ Naive implementation of perceptron neural network. Under heavy development.
 - [ ] Use MLP network for MNIST dataset
 - [ ] Implement various activation function
     - [X] Tanh
-    - [ ] Softmax
-    - [ ] ReLU
+    - [X] Softmax
+    - [X] Softplus
     - [ ] Gaussian
 - [ ] Explore back-propagation algorithms:
     - [X] SGD with momentum
     - [ ] ADAM
     - [ ] Levenberg-Marquardt
 
+
+Major inspiration for this work comes from book ``Machine Learning - An Algorithmic Perspective``.
 
 
 Getting started
@@ -86,11 +88,19 @@ Convergence:
 
 Example of classification training can be found in ``scripts/classification_problem.py``
 
+### Activation functions
+
+For learning network, different activation functions can be used:
+
+![activation_functions](docs/graphs/activation_functions.png)
+
 
 References
 ----------
 
 [Machine Learning - An Algorithmic Perspective (2nd edition)](https://www.amazon.com/Machine-Learning-Algorithmic-Perspective-Recognition/dp/1466583282/ref=dp_ob_title_bk)
+
+[Stephen's Marsland homepage](https://seat.massey.ac.nz/personal/s.r.marsland/mlbook.html)
 
 [Mat's Mazur Blog](https://mattmazur.com/2015/03/17/a-step-by-step-backpropagation-example/)
 
@@ -101,3 +111,5 @@ References
 [Activation function in neural networks](https://towardsdatascience.com/activation-functions-neural-networks-1cbd9f8d91d6)
 
 [Gradient Descent with Momentum](http://www.cs.bham.ac.uk/~jxb/NN/l8.pdf)
+
+[SoftMax explained](https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative/)

@@ -6,7 +6,7 @@ from numbers import Real
 from typing import Optional, Dict, Any, Union, List, cast
 import numpy as np
 
-from NaiveNeurals.MLP.activation_functions import Sigmoid, Function, calculate_error, get_activation_function
+from NaiveNeurals.MLP.activation_functions import Sigmoid, ActivationFunction, calculate_error, get_activation_function
 from NaiveNeurals.MLP.solvers import Solver, calculate_weights
 from NaiveNeurals.data.dataset import DataSet
 from NaiveNeurals.utils import ErrorAlgorithm, InitialisationError, ConvergenceError
@@ -49,7 +49,7 @@ class Layer:
     """Represents neural network's layer"""
 
     def __init__(self, number_of_nodes: int, bias: float,
-                 weights: np.array, activation_function: Function) -> None:
+                 weights: np.array, activation_function: ActivationFunction) -> None:
         """Initialise Layer object
 
         :param number_of_nodes: number of nodes within layer
@@ -265,7 +265,7 @@ class NeuralNetwork:
     # pylint: disable=too-many-arguments
     def setup_network(self, input_data_size: int, output_data_size: int, hidden_layer_number_of_nodes: int,
                       hidden_layer_bias: float = 0.0, output_layer_bias: float = 0.0,
-                      hidden_layer_act_func: Function = Sigmoid(), output_layer_act_func: Function = Sigmoid(),
+                      hidden_layer_act_func: ActivationFunction = Sigmoid(), output_layer_act_func: ActivationFunction = Sigmoid(),
                       weights_range: Union[int, float] = 1,
                       error_function: ErrorAlgorithm = ErrorAlgorithm.SQR) -> None:
         """Setup neural network

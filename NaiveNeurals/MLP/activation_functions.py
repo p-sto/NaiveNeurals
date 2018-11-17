@@ -7,7 +7,7 @@ import numpy as np
 from NaiveNeurals.utils import ErrorAlgorithm
 
 
-class Function(ABC):
+class ActivationFunction(ABC):
     """Abstract function for defining functions"""
 
     label = ''
@@ -33,7 +33,7 @@ class Function(ABC):
         raise NotImplementedError()
 
 
-class Sigmoid(Function):
+class Sigmoid(ActivationFunction):
     """Represents sigmoid function and its derivative"""
 
     label = 'sigmoid'
@@ -57,7 +57,7 @@ class Sigmoid(Function):
         return cls.function(arg) * (1 - cls.function(arg))
 
 
-class Tanh(Function):
+class Tanh(ActivationFunction):
     """Represents hyperbolic tangent"""
 
     label = 'tanh'
@@ -81,7 +81,7 @@ class Tanh(Function):
         return 1 - np.tanh(arg)**2
 
 
-class Linear(Function):
+class Linear(ActivationFunction):
     """Represents linear function"""
 
     label = 'lin'
@@ -107,7 +107,63 @@ class Linear(Function):
         return ones
 
 
-def get_activation_function(label: str) -> Function:
+class SoftMax(ActivationFunction):
+    """Represents SoftMax function
+
+    The ``softmax`` function takes an N-dimensional vector of arbitrary real values and produces
+    another N-dimensional vector with real values in the range (0, 1) that add up to 1.0.
+
+    source: https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative/
+    """
+
+    label = 'softmax'
+
+    @staticmethod
+    def function(arg: np.array, beta: int = 20) -> np.array:        # pylint: disable=arguments-differ
+        """Calculate softmax(arg)
+
+        :param arg: float input value
+        :param beta: scaling parameter
+        :return: float softmax(arg) value
+        """
+        exps = np.exp(beta * arg - beta * arg.max())
+        return exps / np.sum(exps)
+
+    @classmethod
+    def prime(cls, arg: np.array) -> np.array:
+        """Calculate value of softmax's prime derivative for given arg
+
+        :param arg: float input value
+        :return: float value
+        """
+        return cls.function(arg) * (1 - cls.function(arg))
+
+
+class SoftPlus(ActivationFunction):
+    """Represents softplus function"""
+
+    label = 'softplus'
+
+    @staticmethod
+    def function(arg: np.array) -> np.array:
+        """Calculate softplus(arg)
+
+        :param arg: float input value
+        :return: float softmax(arg) value
+        """
+        return np.log(1 + np.exp(arg))
+
+    @classmethod
+    def prime(cls, arg: np.array) -> np.array:
+        """Calculate value of softplus's prime derivative for given arg
+
+        :param arg: float input value
+        :return: float value
+        """
+        return 1/(1 + np.exp(-arg))
+
+
+def get_activation_function(label: str) -> ActivationFunction:
     """Get activation function by label
 
     :param label: string denoting function

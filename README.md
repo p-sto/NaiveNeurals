@@ -10,6 +10,7 @@ Naive implementation of perceptron neural network. Under heavy development.
 - [X] Prepare network learning examples and analysis for:
     - [X] Classification problem
     - [X] Regression problem
+    - [X] Time series problem
 - [ ] Use MLP network for MNIST dataset
 - [ ] Implement various activation function
     - [X] Tanh

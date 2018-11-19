@@ -428,7 +428,7 @@ class NeuralNetwork:
         if not self._was_initialized:
             raise InitialisationError('Network was not initialised!')
         _count = 0
-        _epoch_per_dataset = 10
+        _epoch_per_dataset = 50     # every 50 iters choose new data set from provided list
 
         dataset: DataSet = random.choice(training_datasets)
         self.forward(dataset.inputs)

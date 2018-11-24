@@ -187,7 +187,7 @@ References
 
 [Python neural network pt.1](https://iamtrask.github.io/2015/07/12/basic-python-network/)
 
-[Python neural network pt.1](https://iamtrask.github.io/2015/07/27/python-network-part2/)
+[Python neural network pt.2](https://iamtrask.github.io/2015/07/27/python-network-part2/)
 
 [Activation function in neural networks](https://towardsdatascience.com/activation-functions-neural-networks-1cbd9f8d91d6)
 

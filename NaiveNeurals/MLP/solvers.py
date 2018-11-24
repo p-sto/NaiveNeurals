@@ -19,7 +19,7 @@ class Solver(Enum):
 @unique
 class SolversDefaults(Enum):
     """Stores configuration for solvers defaults values"""
-    GD_MOM = {'alpha': 0.5}
+    GD_MOM = {'alpha': 0.9}
 
 
 class Cache:

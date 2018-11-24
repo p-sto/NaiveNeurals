@@ -21,6 +21,7 @@ Naive implementation of perceptron neural network. Under heavy development.
     - [X] SGD with momentum
     - [ ] ADAM
     - [ ] Levenberg-Marquardt
+- [ ] Create full documentation
 
 
 Major inspiration for this work comes from book ``Machine Learning - An Algorithmic Perspective``.
@@ -56,16 +57,18 @@ $ sudo apt-get install python3.6-tk
 Usage
 -----
 
+### Simple training
+
 ```python
 from NaiveNeurals.MLP.network import NeuralNetwork
 from NaiveNeurals.data.dataset import DataSet
 
 nn = NeuralNetwork()
-input_data_size = 2
-output_data_size = 1
-hidden_layer_number_of_nodes = 5
 
-# every list in inputs represents one input and data pushed into network
+nn.setup_network(input_data_size=2, output_data_size=1,
+                 hidden_layer_number_of_nodes=5)
+
+# every list in inputs represents one network input and data pushed into network
 inputs =  [[0, 0, 1, 1], [1, 0, 1, 0]]
 targets = [[1, 0, 0, 1]]
 
@@ -73,27 +76,104 @@ data_set = DataSet(inputs, targets)
 nn.train(data_set)
 ```
 
-### Example
+If convergence is not achieved, ``ConvergenceError`` is raised.
 
-In ``scripts/regression_problem.py`` you may find example of training network with sine-like data.
+### Network setup
 
-Achieved results:
+There are 2 categories of network configuration parameters:
 
-Approximation:
+1. Network architecture (number of nodes, weights, activation functions etc.)
 
-![Aproximation_sine](docs/graphs/sine_example.png)
+2. Learning configuration (algorithm: CG, CG_MOM, learning rate, target error rate etc.)
 
-Convergence:
+```python
+from NaiveNeurals.MLP.network import NeuralNetwork, LearningConfiguration
+from NaiveNeurals.MLP.activation_functions import Linear, Tanh
 
-![Convergence_sine](docs/graphs/sine_conv.png)
+nn = NeuralNetwork()
 
-Example of classification training can be found in ``scripts/classification_problem.py``
+# with LearningConfiguration one can set multiple parameters for solver algorithm 
+learning_configuration = LearningConfiguration(learning_rate=0.01,
+                                               target_error=0.003,
+                                               solver='GD_MOM',
+                                               max_epochs=1000,
+                                               solver_params={'alpha': 0.95})
 
-### Activation functions
+nn.setup_network(input_data_size=1,
+                 output_data_size=1,
+                 hidden_layer_number_of_nodes=25,
+                 hidden_layer_bias=1,
+                 output_layer_bias=-0.7,
+                 hidden_layer_act_func=Tanh(),
+                 output_layer_act_func=Linear())
 
-For learning network, different activation functions can be used:
+nn.set_learning_params(learning_configuration)
+```
 
-![activation_functions](docs/graphs/activation_functions.png)
+### Batch learning with validation
+
+In most cases it is recommended to split dataset into a few smaller subsets and validation set.
+In batch mode network will switch training sets every 50 epochs and check error rate with validation data.
+
+```python
+from NaiveNeurals.MLP.network import NeuralNetwork
+from NaiveNeurals.utils import ConvergenceError
+
+train_data_set1 = ...
+train_data_set2 = ...
+train_data_set3 = ...
+validation_set = ...
+
+nn = NeuralNetwork()
+
+try:
+    nn.train_with_validation([train_data_set1, train_data_set2, train_data_set3], validation_set)
+except ConvergenceError:
+    pass
+```
+
+### Model export/import
+
+Once model is trained it can be exported to dict and stored as json file using ``export_model`` method:
+
+```python
+from NaiveNeurals.MLP.network import NeuralNetwork
+import json
+
+nn = NeuralNetwork()
+
+nn.setup_network(input_data_size=2, output_data_size=1,
+                 hidden_layer_number_of_nodes=5)
+
+# training procedure ...
+
+with open('test.json', 'w+') as fil:
+    fil.writelines(json.dumps(nn.export_model()))
+```
+
+Model can be imported using ``load_model`` method:
+
+```python
+from NaiveNeurals.MLP.network import NeuralNetwork
+
+model_dict = ... # loaded model - Dict
+
+nnn = NeuralNetwork()
+nnn.load_model(model_dict)
+```
+
+Further Reading
+---------------
+
+If this project got your attention you can read about details below:
+
+[Implementation details](docs/implementation_details.md)
+
+[Classification problem example](docs/classification.md)
+
+[Regression problem example](docs/regression.md)
+
+[Time series problem example](docs/time_series.md)
 
 
 References

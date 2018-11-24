@@ -74,7 +74,6 @@ def train_model() -> None:
     except ConvergenceError:
         pass
 
-
     f1 = plt.figure()
     ax1 = f1.add_subplot(111)
     ax1.plot(dobson_slice, 'b.')

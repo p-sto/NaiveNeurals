@@ -27,7 +27,7 @@ class LearningConfiguration:
                  learning_rate: float = 0.3,
                  max_epochs: int = 10_000,
                  target_error: float = 0.001,
-                 solver_setup: Optional[Dict] = None) -> None:
+                 solver_params: Optional[Dict] = None) -> None:
         """Initialise object
 
         :param error_function: error algorithm
@@ -35,14 +35,14 @@ class LearningConfiguration:
         :param learning_rate: learning rate parameter
         :param max_epochs: max epoch for learning process
         :param target_error: targeted error rate
-        :param solver_setup: solver setup data
+        :param solver_params: solver setup data
         """
         self.error_function = error_function
         self.solver = next(iter(elmn for elmn in Solver if elmn.name.upper() == solver.upper()))
         self.learning_rate = learning_rate
         self.max_epochs = max_epochs
         self.target_error = target_error
-        self.solver_setup = solver_setup if solver_setup else {}
+        self.solver_setup = solver_params if solver_params else {}
 
 
 class Layer:
@@ -180,7 +180,7 @@ class NeuralNetwork:
 
         :param _model: dictionary representing model
         """
-        model = dict(_model)
+        model = dict(_model)        # let's make copy of model
         hidden_layer_act_func = get_activation_function(model.pop('hidden_act_func'))
         output_layer_act_func = get_activation_function(model.pop('output_act_func'))
         input_layer_data = model.get('input')

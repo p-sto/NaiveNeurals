@@ -7,6 +7,7 @@ import matplotlib.patches as mpatches
 from NaiveNeurals.MLP.activation_functions import Linear, Tanh
 from NaiveNeurals.MLP.network import NeuralNetwork, LearningConfiguration
 from NaiveNeurals.data.data_generators import data_generator_for_regression
+from NaiveNeurals.data.data_manipulators import normalise_data
 from NaiveNeurals.data.dataset import DataSet
 from NaiveNeurals.utils import DataSeries, ConvergenceError
 
@@ -17,8 +18,13 @@ def sine_regression() -> None:
     x_values1, y_values1 = data_generator_for_regression(DataSeries.SINE_GAUSS, data_size=6)
     x_values2, y_values2 = data_generator_for_regression(DataSeries.SINE_GAUSS, data_size=8)
     x_values3, y_values3 = data_generator_for_regression(DataSeries.SINE_GAUSS, data_size=10)
-    normalization_outputs = max(max(y_values1 + y_values2 + y_values3), abs(min(y_values1 + y_values2 + y_values3)))
+
     val_x, val_y = data_generator_for_regression(DataSeries.SINE, data_size=20)
+
+    y_values1 = normalise_data(y_values1)
+    y_values2 = normalise_data(y_values2)
+    y_values3 = normalise_data(y_values3)
+    val_y = normalise_data(val_y)
 
     nn = NeuralNetwork()
     input_data_size = 1
@@ -31,7 +37,8 @@ def sine_regression() -> None:
     output_layer_act_func = Linear()
 
     learning_configuration = LearningConfiguration(learning_rate=0.01, target_error=0.003,
-                                                   solver='GD_MOM', max_epochs=20_000)
+                                                   solver='GD_MOM', max_epochs=20_000,
+                                                   solver_params={'alpha': 0.95})
 
     nn.setup_network(input_data_size=input_data_size, output_data_size=output_data_size,
                      hidden_layer_number_of_nodes=hidden_layer_number_of_nodes,
@@ -41,10 +48,10 @@ def sine_regression() -> None:
 
     nn.set_learning_params(learning_configuration)
 
-    train_data_set1 = DataSet([x_values1], [y_values1 / normalization_outputs])
-    train_data_set2 = DataSet([x_values2], [y_values2 / normalization_outputs])
-    train_data_set3 = DataSet([x_values3], [y_values3 / normalization_outputs])
-    validation = DataSet([val_x], [val_y / normalization_outputs])
+    train_data_set1 = DataSet([x_values1], [y_values1])
+    train_data_set2 = DataSet([x_values2], [y_values2])
+    train_data_set3 = DataSet([x_values3], [y_values3])
+    validation = DataSet([val_x], [val_y])
     try:
         nn.train_with_validation([train_data_set1, train_data_set2, train_data_set3], validation)
     except ConvergenceError:

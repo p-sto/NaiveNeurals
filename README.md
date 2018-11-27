@@ -11,6 +11,7 @@ Naive implementation of perceptron neural network. Under heavy development.
     - [X] Classification problem
     - [X] Regression problem
     - [X] Time series problem
+    - [X] Data compression
 - [ ] Use MLP network for MNIST dataset
 - [ ] Implement various activation function
     - [X] Tanh
@@ -21,6 +22,7 @@ Naive implementation of perceptron neural network. Under heavy development.
     - [X] SGD with momentum
     - [ ] ADAM
     - [ ] Levenberg-Marquardt
+- [ ] Add support for more than 1 hidden layer
 - [ ] Create full documentation
 
 

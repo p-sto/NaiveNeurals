@@ -13,7 +13,7 @@ Naive implementation of perceptron neural network. Under heavy development.
     - [X] Time series problem
     - [X] Data compression
 - [ ] Use MLP network for MNIST dataset
-- [ ] Implement various activation function
+- [ ] Implement various activation functions
     - [X] Tanh
     - [X] Softmax
     - [X] Softplus
